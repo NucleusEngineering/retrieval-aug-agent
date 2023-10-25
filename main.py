@@ -1,14 +1,17 @@
 import datetime
+from dotenv import dotenv_values
 
 import streamlit as st
 import pandas as pd
 
 from google.cloud import storage
+import google.auth
 
-import secrets_1
-from SearchQuerySession import SearchQuerySession
-from IngestionSession import IngestionSession
+from rsc.SearchQuerySession import SearchQuerySession
+from rsc.IngestionSession import IngestionSession
 
+secrets = dotenv_values(".env")
+credentials, _ = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_FILE'])
 
 def main(client_query:str) -> None:  
 
@@ -25,9 +28,9 @@ def main(client_query:str) -> None:
     return None
 
 
-def get_current_files(bucket_name) -> list:
+def get_current_files(bucket_name, secrets=secrets, credentials=credentials) -> list:
 
-    bucket = storage.Client(project=secrets_1.gcp_project_id, credentials=secrets_1.credentials).bucket(bucket_name)
+    bucket = storage.Client(project=secrets['GCP_PROJECT_ID'], credentials=credentials).bucket(bucket_name)
     files_with_links = [(blob.path.split("/")[-1], blob.generate_signed_url(expiration=datetime.timedelta(minutes=10))) for blob in bucket.list_blobs()]
 
     return files_with_links
@@ -37,14 +40,14 @@ def upload_new_file(new_file:bytes, new_file_name:str) -> None:
     
     ingestion = IngestionSession()
 
-    ingestion(file_to_ingest=new_file, new_file_name=new_file_name)
+    ingestion(new_file_name=new_file_name, file_to_ingest=new_file, ingest_local_file=False)
 
     return None
 
 
 st.title('These files are currently in your knowledge base.')
 
-df = pd.DataFrame(get_current_files(bucket_name=secrets_1.raw_pdfs_bucket_name))
+df = pd.DataFrame(get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"]))
 st.dataframe(df)
 
 
@@ -57,8 +60,8 @@ with st.form("file_upload_form"):
 
     if button:
         upladed_file_name = uploaded_file.name
-        # uploaded_file_bytes = uploaded_file.getvalue()
-        upload_new_file(new_file=uploaded_file, new_file_name=upladed_file_name)
+        uploaded_file_bytes = uploaded_file.getvalue()
+        upload_new_file(new_file=uploaded_file_bytes, new_file_name=upladed_file_name)
 
 
 st.title('Ask a question towards your knowledge base.')

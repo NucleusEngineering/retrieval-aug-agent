@@ -1,21 +1,24 @@
-from EmbeddingSession import EmbeddingSession
-from VectorSearchSession import VectorSearchSession
-from LLMSession import LLMSession
+from rsc.EmbeddingSession import EmbeddingSession
+from rsc.VectorSearchSession import VectorSearchSession
+from rsc.LLMSession import LLMSession
 
-import secrets_1
+from dotenv import dotenv_values
 
 import firebase_admin
 from firebase_admin import firestore
+import google.auth
 
 class SearchQuerySession:
     def __init__(self):
         self.embedding_session = EmbeddingSession()
-        self.vector_search_session = VectorSearchSession(gcp_project_id=secrets_1.gcp_project_id,
-                                                         gcp_project_number=secrets_1.gcp_project_number,
-                                                         credentials=secrets_1.credentials,
-                                                         index_endpoint_id=secrets_1.vector_search_index_endpoint_id,
-                                                         deployed_index_id=secrets_1.vector_search_deployed_index_id)
-        self.firestore_collection_name = secrets_1.firestore_collection_name
+        self.secrets = dotenv_values(".env")
+        self.credentials, _ = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
+        self.vector_search_session = VectorSearchSession(gcp_project_id=self.secrets["GCP_PROJECT_ID"],
+                                                         gcp_project_number=self.secrets["GCP_PROJECT_NUMBER"],
+                                                         credentials=self.credentials,
+                                                         index_endpoint_id=self.secrets["VECTOR_SEARCH_INDEX_ENDPOINT_ID"],
+                                                         deployed_index_id=self.secrets["VECTOR_SEARCH_DEPLOYED_INDEX_ID"])
+        self.firestore_collection_name = self.secrets["FIRESTORE_COLLECTION_NAME"]
 
     def __call__(self, client_query) -> dict:
         answer, sources = self._main(client_query)
@@ -57,7 +60,7 @@ class SearchQuerySession:
             app = firebase_admin.initialize_app()
 
         # Setup & auth firestore client.
-        db = firestore.Client(project=secrets_1.project_id, credentials=secrets_1.credentials)
+        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials)
 
         # Pull relevant docs from Firestore collection.
         relevant_docs = []
@@ -74,13 +77,19 @@ class SearchQuerySession:
             if doc['document_name'] not in relevant_docs_names:
                 relevant_docs_names.append(doc['document_name'])
             
-        # relevant_docs_names = [doc["document_name"] for doc in relevant_docs if doc["document_name"] not in relevant_docs]
-        # relevant_docs_content = [doc["page_content"] for doc in relevant_docs]
-
         return relevant_docs_content, relevant_docs_names
 
 
 if __name__ == "__main__":
+
+    # cwd = os.getcwd()
+    # print(cwd)
+
+    # os.chdir("../retrieval-aug-agent")
+
+    # cwd = os.getcwd()
+    # print(cwd)
+
     query_session = SearchQuerySession()
     query_session(client_query="How were knights being paid?")
     print("Hello World!")

@@ -1,51 +1,48 @@
-from VectorSearchSession import VectorSearchSession
-from EmbeddingSession import EmbeddingSession
-import secrets_1
+from rsc.EmbeddingSession import EmbeddingSession
 
 import os 
 import json
+from dotenv import dotenv_values
+import io
 
 from google.api_core.client_options import ClientOptions
 from google.cloud import documentai
 from google.cloud import storage
 from google.cloud import aiplatform_v1
+import google.auth
 
 import firebase_admin
 from firebase_admin import firestore
 
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import streamlit as st
 
 
 class IngestionSession:
     def __init__(self,
-                 docai_processor_id=secrets_1.document_ai_processor_id,
-                 docai_processor_version=secrets_1.document_ai_processor_version,
                  chunk_size=1000,
                  chunk_overlap=50):
         
-        self.vector_search_session = VectorSearchSession(gcp_project_id=secrets_1.gcp_project_id,
-                                                         gcp_project_number=secrets_1.gcp_project_number,
-                                                         credentials=secrets_1.credentials,
-                                                         index_endpoint_id=secrets_1.vector_search_index_endpoint_id,
-                                                         deployed_index_id=secrets_1.vector_search_deployed_index_id)
-        
-        self.docai_processor_id = docai_processor_id
-        self.docai_processor_version = docai_processor_version
+        self.secrets = dotenv_values(".env")
+        self.credentials, self.project_id = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
+
+        self.docai_processor_id = self.secrets['DOCUMENT_AI_PROCESSOR_ID']
+        self.docai_processor_version = self.secrets["DOCUMENT_AI_PROCESSOR_VERSION"]
         self.embedding_session = EmbeddingSession()
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-    def __call__(self, file_to_ingest, new_file_name: str) -> None:
+    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False) -> None:
 
         print("+++++ Upload raw PDF... +++++")
-        self._store_raw_upload(file_to_ingest=file_to_ingest, new_file_name=new_file_name)
+        self._store_raw_upload(new_file_name=new_file_name, file_to_ingest=file_to_ingest, ingest_local_file=ingest_local_file)
 
         print("+++++ Document OCR... +++++")
         document_string = self._ocr_pdf(processor_id=self.docai_processor_id,
                       processor_version=self.docai_processor_version,
-                      file_path=file_to_ingest)
+                      file_path=new_file_name,
+                      file_to_ingest=file_to_ingest,
+                      ingest_local_file=ingest_local_file)
         
         print("+++++ Chunking Document... +++++")
         list_of_chunks = self._chunk_doc(stringified_doc=document_string,
@@ -70,26 +67,30 @@ class IngestionSession:
                           processor_version: str,
                           file_path: str,
                           mime_type: str,
-                          process_options = None) -> documentai.Document:
+                          process_options = None,
+                          file_to_ingest=None,
+                          ingest_local_file: bool = False,
+                          ) -> documentai.Document:
         
         client = documentai.DocumentProcessorServiceClient(
-            credentials=secrets_1.credentials,
+            credentials=self.credentials,
             client_options=ClientOptions(
                 api_endpoint=f"{location}-documentai.googleapis.com"
             )
         )
 
-        file_path = file_path.getvalue()
+        # file_path = file_path.getvalue()
 
         name = client.processor_version_path(
-            secrets_1.project_id, location, processor_id, processor_version
+            self.secrets["GCP_PROJECT_ID"], location, processor_id, processor_version
         )
 
-        # # Read the file into memory
-        # with open(file_path, "rb") as image:
-        #     image_content = image.read()
-
-        image_content = file_path
+        if ingest_local_file:
+            # Read the file into memory
+            with open(file_path, "rb") as image:
+                image_content = image.read()
+        else:
+            image_content = file_to_ingest
 
         # Configure the process request
         request = documentai.ProcessRequest(name=name,
@@ -106,7 +107,9 @@ class IngestionSession:
                  processor_version: str,
                  file_path: str,
                  location: str = "eu",
-                 mime_type: str = "application/pdf") -> str:
+                 mime_type: str = "application/pdf",
+                 file_to_ingest=None,
+                 ingest_local_file: bool = False) -> str:
         
         process_options = documentai.ProcessOptions(
             ocr_config=documentai.OcrConfig(
@@ -129,6 +132,8 @@ class IngestionSession:
             file_path=file_path,
             mime_type=mime_type,
             process_options=process_options,
+            file_to_ingest=file_to_ingest,
+            ingest_local_file=ingest_local_file
         )
 
         return document.text
@@ -164,20 +169,22 @@ class IngestionSession:
 
         return embedded_docs
     
-    def _store_raw_upload(self, file_to_ingest, new_file_name) -> None:
+    def _store_raw_upload(self, new_file_name:str, file_to_ingest=None, ingest_local_file:bool = False) -> None:
         # store raw uploaded pdf in gcs
+        storage_client = storage.Client(credentials=self.credentials)
+        bucket = storage_client.bucket(self.secrets["RAW_PDFS_BUCKET_NAME"])
 
-        storage_client = storage.Client(credentials=secrets_1.credentials)
-        bucket = storage_client.bucket(secrets_1.raw_pdfs_bucket_name)
+        print(new_file_name)
 
-        # if isinstance(file_to_ingest, str):
-        #     blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
-        #     blob.upload_from_filename(file_to_ingest)
-        # else:
-        # with open(file_to_ingest, 'r') as f:
-        
         blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
-        blob.upload_from_file(file_to_ingest)
+
+        print(ingest_local_file)
+
+        if ingest_local_file:
+            blob.upload_from_filename(new_file_name)
+        else:
+            file_contents = io.BytesIO(file_to_ingest)
+            blob.upload_from_file(file_contents)
 
         return None
 
@@ -187,7 +194,7 @@ class IngestionSession:
         if not firebase_admin._apps:
             app = firebase_admin.initialize_app()
 
-        db = firestore.Client(project=secrets_1.project_id, credentials=secrets_1.credentials)
+        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials)
         
         for split in doc_splits:
             data = {"id": split.metadata["chunk_identifier"],
@@ -195,7 +202,7 @@ class IngestionSession:
                     "page_content": split.page_content}
 
             # Add a new doc in collection with embedding, doc name & chunk identifier
-            db.collection(secrets_1.firestore_collection_name).document(str(split.metadata["chunk_identifier"])).set(data)
+            db.collection(self.secrets["FIRESTORE_COLLECTION_NAME"]).document(str(split.metadata["chunk_identifier"])).set(data)
 
         print(f"Added {[split.metadata['chunk_identifier'] for split in doc_splits]}")
         
@@ -204,13 +211,11 @@ class IngestionSession:
     def _vector_index_streaming_upsert(self, upsert_datapoints:list) -> None:
         # method to upsert embeddings to vector search index
 
-        index_client = aiplatform_v1.IndexServiceClient(credentials=secrets_1.credentials, client_options=dict(
+        index_client = aiplatform_v1.IndexServiceClient(credentials=self.credentials, client_options=dict(
             api_endpoint=f"europe-west1-aiplatform.googleapis.com"
         ))
-        # index_client.
 
-        # index_name = f"projects/{secrets_1.gcp_project_number}/locations/europe-west1/indexEndpoints/{secrets_1.vector_search_index_endpoint_id}"
-        index_name = f"projects/{secrets_1.gcp_project_number}/locations/europe-west1/indexes/3441260288706347008"
+        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/europe-west1/indexes/3441260288706347008"
         
         insert_datapoints_payload = []
 
@@ -231,19 +236,7 @@ if __name__ == "__main__":
     print(cwd)
 
     ingestion = IngestionSession()
+    
+    ingestion(new_file_name="woher-kommen-bekannte-markennamen.pdf", ingest_local_file=True)
 
-    storage_client = storage.Client(credentials=secrets_1.credentials)
-    bucket = storage_client.bucket(secrets_1.raw_pdfs_bucket_name)
-
-    # blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
-    # file_bytes = blob.download_as_bytes()
-
-    with open("./woher-kommen-bekannte-markennamen.pdf", 'rb') as f:
-        file_bytes = f.read()
-        ingestion(file_to_ingest=file_bytes, new_file_name="woher-kommen-bekannte-markennamen.pdf")
-
-    # ingestion(file_to_ingest="./woher-kommen-bekannte-markennamen.pdf", new_file_name="woher-kommen-bekannte-markennamen.pdf")
-
-    # ingestion._firestore_index_embeddings(doc_splits=ingestion._chunk_doc()
-    ingestion._vector_index_streaming_upsert([])
     print("Hello World!")
