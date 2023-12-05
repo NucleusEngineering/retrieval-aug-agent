@@ -13,6 +13,41 @@ from rsc.IngestionSession import IngestionSession
 secrets = dotenv_values(".env")
 credentials, _ = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_FILE'])
 
+
+class DocPreview:
+    def __init__(self):
+        pass
+
+    def render(self):
+        row_count = 2
+
+        with st.container(border=True):
+            st.write("This is inside the container")
+
+            for i in range(row_count):
+                
+                    col1, col2, col3 = st.columns(3)
+
+                    # Add widgets to the columns
+                    with col1:
+                        st.header("A cat")
+                        st.image("PDF_file_icon.png")
+                        st.button('delete', key=f'delete_col1_{i}')
+
+                    with col2:
+                        st.header("A dog")
+                        st.image("PDF_file_icon.png")
+                        st.button('delete', key=f'delete_col2_{i}')
+
+                    with col3:
+                        # st.header("An owl")
+                        # st.image("https://static.streamlit.io/examples/owl.jpg")
+                        # st.button('delete', key=f'delete_col3_{i}')
+                        pass
+
+
+
+
 def main(client_query:str) -> None:  
 
     with st.spinner('Processing... This might take a minute or two.'):
@@ -27,12 +62,34 @@ def main(client_query:str) -> None:
 
     return None
 
+def extract_filename_from_url(text):
+  """
+  Extracts the string between the last `/` and `.pdf` from a text.
+
+  Args:
+    text: The text to extract from.
+
+  Returns:
+    The extracted string, or None if not found.
+  """
+  # Find the last occurrence of `&%`
+  last_percent = text.rfind("/")
+
+  # Find the next occurrence of `.pdf`
+  next_pdf = text.find(".pdf", last_percent)
+
+  # Extract the substring if both patterns were found
+  if last_percent != -1 and next_pdf != -1:
+    return text[last_percent + 1:next_pdf]
+  else:
+    return text 
+
 
 def get_current_files(bucket_name, secrets=secrets, credentials=credentials) -> list:
-
     bucket = storage.Client(project=secrets['GCP_PROJECT_ID'], credentials=credentials).bucket(bucket_name)
-    files_with_links = [(blob.path.split("/")[-1], blob.generate_signed_url(expiration=datetime.timedelta(minutes=10))) for blob in bucket.list_blobs()]
-
+    
+    files_with_links = [(extract_filename_from_url(blob.name), blob.generate_signed_url(expiration=datetime.timedelta(minutes=10))) for blob in bucket.list_blobs()]    
+    
     return files_with_links
 
 
@@ -49,6 +106,9 @@ st.title('These files are currently in your knowledge base.')
 
 df = pd.DataFrame(get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"]))
 st.dataframe(df)
+
+# st.title('Knowledge Base Columns.')
+# DocPreview().render()
 
 
 st.title('Upload a new file to your knowledge base.')
