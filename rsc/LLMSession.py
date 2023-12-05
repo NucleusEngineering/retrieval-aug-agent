@@ -36,7 +36,7 @@ class LLMSession:
                        temperature:float=0.2,
                        top_p:float=0.8, top_k:int=40) -> str:
 
-        llm = VertexAI(model_name="text-bison@001",
+        llm = VertexAI(model_name="text-unicorn@001",
                        max_output_tokens=max_output_tokens,
                        temperature=temperature,
                        top_p=top_p,
