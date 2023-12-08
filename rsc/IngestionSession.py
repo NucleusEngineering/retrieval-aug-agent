@@ -176,7 +176,14 @@ class IngestionSession:
 
         print(new_file_name)
 
-        blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
+        # string = "This is a string containing a substring."
+        # substring = "substring"
+
+        if '.pdf' in new_file_name:
+            blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
+        else:
+            new_file_name = new_file_name + ".pdf"
+            blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
 
         print(ingest_local_file)
 
