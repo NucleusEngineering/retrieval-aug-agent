@@ -1,4 +1,5 @@
 import datetime
+import math
 from dotenv import dotenv_values
 
 import streamlit as st
@@ -15,36 +16,40 @@ credentials, _ = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_
 
 
 class DocPreview:
-    def __init__(self):
-        pass
+    def __init__(self, list_of_docs: list):
+        self.list_of_docs = list_of_docs
+        self.row_count = math.ceil(len(self.list_of_docs) / 3) 
+        self.doc_count = len(self.list_of_docs)
+        self.doc_index = 0
 
     def render(self):
-        row_count = 2
-
         with st.container(border=True):
             st.write("This is inside the container")
 
-            for i in range(row_count):
+            for _ in range(self.row_count):
                 
-                    col1, col2, col3 = st.columns(3)
+                col1, col2, col3 = st.columns(3)
 
-                    # Add widgets to the columns
-                    with col1:
-                        st.header("A cat")
-                        st.image("PDF_file_icon.png")
-                        st.button('delete', key=f'delete_col1_{i}')
+                with col1:
+                    self._render_doc_col()
 
-                    with col2:
-                        st.header("A dog")
-                        st.image("PDF_file_icon.png")
-                        st.button('delete', key=f'delete_col2_{i}')
+                with col2:
+                    self._render_doc_col()
 
-                    with col3:
-                        # st.header("An owl")
-                        # st.image("https://static.streamlit.io/examples/owl.jpg")
-                        # st.button('delete', key=f'delete_col3_{i}')
-                        pass
+                with col3:
+                    self._render_doc_col()
 
+    def _render_doc_col(self):
+        if self.doc_index < self.doc_count:
+            self._render_doc_item(doc_name_and_url=self.list_of_docs[self.doc_index])
+            self.doc_index += 1
+        else:
+            pass
+
+    def _render_doc_item(self, doc_name_and_url):
+        st.write(f"[{doc_name_and_url[0]}](%s)" % doc_name_and_url[1])
+        st.image("PDF_file_icon.png", width=50)
+        st.button('delete', key=f'delete_{doc_name_and_url[0]}')
 
 
 
@@ -104,13 +109,13 @@ def upload_new_file(new_file:bytes, new_file_name:str) -> None:
 
 st.title('These files are currently in your knowledge base.')
 
-df = pd.DataFrame(get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"]))
+current_files = get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"])
+df = pd.DataFrame(current_files)
 st.dataframe(df)
 
+
 st.title('Knowledge Base Columns.')
-DocPreview().render()
-
-
+DocPreview(list_of_docs=current_files).render()
 
 
 st.title('Upload a new file to your knowledge base.')
