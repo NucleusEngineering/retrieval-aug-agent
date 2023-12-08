@@ -107,8 +107,10 @@ st.title('These files are currently in your knowledge base.')
 df = pd.DataFrame(get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"]))
 st.dataframe(df)
 
-# st.title('Knowledge Base Columns.')
-# DocPreview().render()
+st.title('Knowledge Base Columns.')
+DocPreview().render()
+
+
 
 
 st.title('Upload a new file to your knowledge base.')
