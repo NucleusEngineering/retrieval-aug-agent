@@ -24,6 +24,16 @@ Do not try to make up an answer:
 Question: {question}
 Helpful & specific Answer:"""
 
+FILE_NAME_EXTRACTION_TEMPLATE = """
+You are given an url type of string that contains a document name in natural language.
+
+Extract the name in natural language and use "-" as delimiter between words.
+
+String: {raw_filename}
+
+Summarized and human readable file name:
+"""
+
 
 class LLMSession:
     def __init__(self, client_query_string, context_docs):
