@@ -1,5 +1,5 @@
-import datetime
 import math
+import datetime
 from dotenv import dotenv_values
 
 import streamlit as st
@@ -10,6 +10,8 @@ import google.auth
 
 from rsc.SearchQuerySession import SearchQuerySession
 from rsc.IngestionSession import IngestionSession
+from rsc.DeletionSession import DeletionSession
+
 
 secrets = dotenv_values(".env")
 credentials, _ = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_FILE'])
@@ -47,11 +49,12 @@ class DocPreview:
             pass
 
     def _render_doc_item(self, doc_name_and_url):
-        st.write(f"[{doc_name_and_url[0]}](%s)" % doc_name_and_url[1])
+        doc_name = doc_name_and_url[0]
+        doc_link = doc_name_and_url[1]
+
+        st.write(f"[{doc_name}](%s)" % doc_link)
         st.image("PDF_file_icon.png", width=50)
-        st.button('delete', key=f'delete_{doc_name_and_url[0]}')
-
-
+        st.button('delete', key=f'delete_{doc_name}', on_click=delete_file, args=[doc_name])
 
 def main(client_query:str) -> None:  
 
@@ -66,6 +69,7 @@ def main(client_query:str) -> None:
     st.write(answer['text'])
 
     return None
+
 
 def extract_filename_from_url(text):
   """
@@ -105,6 +109,16 @@ def upload_new_file(new_file:bytes, new_file_name:str) -> None:
     ingestion(new_file_name=new_file_name, file_to_ingest=new_file, ingest_local_file=False)
 
     return None
+
+def delete_file(document_name:str) -> None:
+    print(f'deletion {document_name}')
+    
+    deletion = DeletionSession()
+
+    deletion(document_name=document_name)
+
+    return None
+
 
 
 st.title('These files are currently in your knowledge base.')
