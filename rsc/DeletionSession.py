@@ -1,3 +1,4 @@
+from os import path
 from dotenv import dotenv_values
 
 from google.cloud import aiplatform_v1
@@ -7,17 +8,19 @@ import google.auth
 import firebase_admin
 from firebase_admin import firestore
 
+
 class DeletionSession:
     def __init__(self) -> None:
+        
+        self.secrets = dotenv_values(".env")
 
         if not firebase_admin._apps:
-            app = firebase_admin.initialize_app()
+            credentials = firebase_admin.credentials.Certificate(self.secrets['GCP_CREDENTIAL_FILE'])
+            app = firebase_admin.initialize_app(credentials)
 
-        self.secrets = dotenv_values(".env")
         self.credentials, self.project_id = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
-        self.firestore_client = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials)
+        self.firestore_client = firestore.client()
         self.firestore_collection_name = self.secrets["FIRESTORE_COLLECTION_NAME"]
-
     
     def __call__(self, document_name: str) -> None:
         """

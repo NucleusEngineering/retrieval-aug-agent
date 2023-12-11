@@ -44,7 +44,7 @@ class LLMSession:
     def llm_prediction(self,
                        max_output_tokens:int=1024,
                        temperature:float=0.2,
-                       top_p:float=0.8, top_k:int=40) -> str:
+                       top_p:float=0.8, top_k:int=40) -> dict:
 
         llm = VertexAI(model_name="text-unicorn@001",
                        max_output_tokens=max_output_tokens,

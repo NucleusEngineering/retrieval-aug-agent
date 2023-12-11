@@ -24,10 +24,16 @@ class IngestionSession:
                  chunk_overlap=50):
         
         self.secrets = dotenv_values(".env")
-        self.credentials, self.project_id = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
 
-        self.docai_processor_id = self.secrets['DOCUMENT_AI_PROCESSOR_ID']
-        self.docai_processor_version = self.secrets["DOCUMENT_AI_PROCESSOR_VERSION"]
+        if not firebase_admin._apps:
+            credentials = firebase_admin.credentials.Certificate(self.secrets['GCP_CREDENTIAL_FILE'])
+            app = firebase_admin.initialize_app(credentials)
+
+        self.credentials, _ = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
+        self.project_id = str(self.secrets["GCP_PROJECT_ID"])
+
+        self.docai_processor_id = str(self.secrets['DOCUMENT_AI_PROCESSOR_ID'])
+        self.docai_processor_version = str(self.secrets["DOCUMENT_AI_PROCESSOR_VERSION"])
         self.embedding_session = EmbeddingSession()
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
@@ -82,7 +88,7 @@ class IngestionSession:
         # file_path = file_path.getvalue()
 
         name = client.processor_version_path(
-            self.secrets["GCP_PROJECT_ID"], location, processor_id, processor_version
+            self.project_id, location, processor_id, processor_version
         )
 
         if ingest_local_file:
@@ -199,9 +205,10 @@ class IngestionSession:
         # upload embeddings to firestore
 
         if not firebase_admin._apps:
-            app = firebase_admin.initialize_app()
+            credentials = firebase_admin.credentials.Certificate(self.secrets['GCP_CREDENTIAL_FILE'])
+            app = firebase_admin.initialize_app(credentials)
 
-        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials)
+        db = firestore.client()
         
         for split in doc_splits:
             data = {"id": split.metadata["chunk_identifier"],

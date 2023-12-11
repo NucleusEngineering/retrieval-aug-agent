@@ -14,6 +14,7 @@ from rsc.DeletionSession import DeletionSession
 
 
 secrets = dotenv_values(".env")
+print(secrets)
 credentials, _ = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_FILE'])
 
 
