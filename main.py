@@ -55,7 +55,7 @@ class DocPreview:
 
         st.write(f"[{doc_name}](%s)" % doc_link)
         st.image("PDF_file_icon.png", width=50)
-        st.button('delete', key=f'delete_{doc_name}', on_click=delete_file, args=[doc_name])
+        st.button('delete', key=f'delete_{doc_name}', on_click=delete_file, args=(doc_name))
 
 def main(client_query:str, model_name: str) -> None:  
 
@@ -140,7 +140,7 @@ with st.form("file_upload_form"):
     
     button = st.form_submit_button('Upload', help=None, on_click=None, args=None, kwargs=None, type="primary", disabled=False, use_container_width=False)
 
-    if button:
+    if button and uploaded_file is not None:
         upladed_file_name = uploaded_file.name
         uploaded_file_bytes = uploaded_file.getvalue()
         upload_new_file(new_file=uploaded_file_bytes, new_file_name=upladed_file_name)
