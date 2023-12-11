@@ -22,27 +22,34 @@ class DeletionSession:
         self.firestore_client = firestore.client()
         self.firestore_collection_name = self.secrets["FIRESTORE_COLLECTION_NAME"]
     
-    def __call__(self, document_name: str) -> None:
+    def __call__(self, document_name = None, ids_to_delete = None) -> None:
         """
         Orchestrate the deletion session.
         """
-        ids_to_delete = self._search_doc_ids(document_name)
 
-        if isinstance(ids_to_delete, list):
-            # Delete chunk embedding string matching from firestore.
-            self._delete_docs_from_firestore(ids_to_delete)
+        if (document_name is None and ids_to_delete is None) or (document_name is not None and ids_to_delete is not None):
+            raise ValueError("Exactly one argument must be provided.")
 
-            # Delete chunk embedding from vector store.
-            self._delete_docs_from_vectorstore(ids_to_delete)
+        if ids_to_delete is None:
+            document_name = str(document_name)
+            ids_to_delete = self._search_doc_ids(document_name)
 
-            # Delete original file from gcs bucket.
-            self._delete_doc_from_gcs(document_name)
-
-            print("Deletion session complete.")
-
+        if len(ids_to_delete) == 0:
+            print("No documents to delete.")
+            return None
+        
+        # Delete chunk embedding string matching from firestore.
+        self._delete_docs_from_firestore(ids_to_delete)
+        
+        # Delete chunk embedding from vector store.
+        self._delete_docs_from_vectorstore(ids_to_delete)
+        
+        # Delete original file from gcs bucket.
+        self._delete_doc_from_gcs(document_name)
+        print("Deletion session complete.")
         return None
 
-    def _search_doc_ids(self, document_name: str):
+    def _search_doc_ids(self, document_name: str) -> list:
         """
         Method to search for document ids in in the firestore collection based on the document name.
         """
@@ -53,8 +60,8 @@ class DeletionSession:
         doc = doc_ref.get()
 
         if not doc.exists:
-            print(f'No IDs found for document name: {document_name}.')
-            return None
+            print('No documents exist for this name.')
+            return []
 
         while doc.exists:
             list_of_ids.append(f'{document_name}-{count}')
@@ -134,13 +141,19 @@ class DeletionSession:
 if __name__ == "__main__":
 
     delete = DeletionSession()
-    delete("Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World")
+    delete(document_name="Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World")
 
-    to_be_deleted = ['Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-0',
-                       'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-1', 
-                       'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-2', 
-                       'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-3', 
-                       'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-4', 
-                       'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-5']
+
+    print('###')
+    to_be_deleted = [str(i) for i in list(range(2055))]
+    print(to_be_deleted)
+    delete(ids_to_delete=to_be_deleted)
+
+    # to_be_deleted = ['Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-0',
+    #                    'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-1', 
+    #                    'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-2', 
+    #                    'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-3', 
+    #                    'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-4', 
+    #                    'Physicist Narges Mohammadi awarded Nobe... for human-rights work – Physics World-5']
 
     print("Hello World!")
