@@ -9,7 +9,7 @@ from firebase_admin import firestore
 import google.auth
 
 class SearchQuerySession:
-    def __init__(self):
+    def __init__(self, model_name: str):
         self.embedding_session = EmbeddingSession()
         self.secrets = dotenv_values(".env")
         self.credentials, _ = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
@@ -19,6 +19,7 @@ class SearchQuerySession:
                                                          index_endpoint_id=self.secrets["VECTOR_SEARCH_INDEX_ENDPOINT_ID"],
                                                          deployed_index_id=self.secrets["VECTOR_SEARCH_DEPLOYED_INDEX_ID"])
         self.firestore_collection_name = self.secrets["FIRESTORE_COLLECTION_NAME"]
+        self.model_name = model_name
 
     def __call__(self, client_query) -> tuple:
         answer, sources = self._main(client_query)
@@ -47,7 +48,7 @@ class SearchQuerySession:
 
         # call LLM with final prompt
         print("+++++ Prompting LLM with final prompt... +++++")
-        llm_answer = LLMSession(client_query_string=client_query, context_docs=joined_docs_content).llm_prediction(max_output_tokens=1024,
+        llm_answer = LLMSession(client_query_string=client_query, context_docs=joined_docs_content, model_name=self.model_name).llm_prediction(max_output_tokens=1024,
                                                                                                                     temperature=0.1,
                                                                                                                     top_p=0.6,
                                                                                                                     top_k=20)

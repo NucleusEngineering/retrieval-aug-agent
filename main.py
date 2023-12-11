@@ -57,11 +57,11 @@ class DocPreview:
         st.image("PDF_file_icon.png", width=50)
         st.button('delete', key=f'delete_{doc_name}', on_click=delete_file, args=[doc_name])
 
-def main(client_query:str) -> None:  
+def main(client_query:str, model_name: str) -> None:  
 
     with st.spinner('Processing... This might take a minute or two.'):
 
-        query_session = SearchQuerySession()
+        query_session = SearchQuerySession(model_name=model_name)
         answer, sources = query_session(client_query=client_query)
 
         df = pd.DataFrame({"Sources": sources})
@@ -97,8 +97,10 @@ def extract_filename_from_url(text):
 
 def get_current_files(bucket_name, secrets=secrets, credentials=credentials) -> list:
     bucket = storage.Client(project=secrets['GCP_PROJECT_ID'], credentials=credentials).bucket(bucket_name)
+
+    print(list(bucket.list_blobs()))
     
-    files_with_links = [(extract_filename_from_url(blob.name), blob.generate_signed_url(expiration=datetime.timedelta(minutes=10))) for blob in bucket.list_blobs()]    
+    files_with_links = [(extract_filename_from_url(blob.name), blob.generate_signed_url(expiration=datetime.timedelta(minutes=10))) for blob in bucket.list_blobs() if ".pdf" in str(blob.name)]    
     
     return files_with_links
 
@@ -111,6 +113,7 @@ def upload_new_file(new_file:bytes, new_file_name:str) -> None:
 
     return None
 
+
 def delete_file(document_name:str) -> None:
     print(f'deletion {document_name}')
     
@@ -121,15 +124,12 @@ def delete_file(document_name:str) -> None:
     return None
 
 
-
 st.title('These files are currently in your knowledge base.')
 
 current_files = get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"])
 df = pd.DataFrame(current_files)
 st.dataframe(df)
 
-
-st.title('Knowledge Base Columns.')
 DocPreview(list_of_docs=current_files).render()
 
 
@@ -152,7 +152,9 @@ with st.form("transcript_submission_form"):
 
     client_query = st.text_input("Question:")
 
+    model_name = str(st.selectbox('Which Model would you like to ask?', ('text-bison@001', 'text-bison@002', 'text-unicorn@001'), placeholder='text-bison@002'))
+
     button = st.form_submit_button('Ask', help=None, on_click=None, args=None, kwargs=None, type="primary", disabled=False, use_container_width=False)
 
     if button:
-        main(client_query=client_query)
+        main(client_query=client_query, model_name=model_name)
