@@ -65,6 +65,8 @@ class IngestionSession:
         print("+++++ Updating Vector Search Index... +++++")
         self._vector_index_streaming_upsert(embeddings_to_ingest)
 
+        print("+++++ Ingestion Done. +++++")
+
         return None
 
     def _process_document(self,
