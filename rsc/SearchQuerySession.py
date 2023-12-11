@@ -91,6 +91,6 @@ if __name__ == "__main__":
     # cwd = os.getcwd()
     # print(cwd)
 
-    query_session = SearchQuerySession()
+    query_session = SearchQuerySession(model_name='text-bison@002')
     query_session(client_query="How were knights being paid?")
     print("Hello World!")
