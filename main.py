@@ -14,7 +14,6 @@ from rsc.DeletionSession import DeletionSession
 
 
 secrets = dotenv_values(".env")
-print(secrets)
 credentials, _ = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_FILE'])
 
 
@@ -27,7 +26,6 @@ class DocPreview:
 
     def render(self):
         with st.container(border=True):
-            st.write("This is inside the container")
 
             for _ in range(self.row_count):
                 
@@ -127,8 +125,8 @@ def delete_file(document_name:str) -> None:
 st.title('These files are currently in your knowledge base.')
 
 current_files = get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"])
-df = pd.DataFrame(current_files)
-st.dataframe(df)
+# df = pd.DataFrame(current_files)
+# st.dataframe(df)
 
 DocPreview(list_of_docs=current_files).render()
 
