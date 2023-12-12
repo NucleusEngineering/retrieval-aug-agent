@@ -177,7 +177,7 @@ class IngestionSession:
 
         return embedded_docs
     
-    def _store_raw_upload(self, new_file_name:str, file_to_ingest=None, ingest_local_file:bool = False) -> None:
+    def _store_raw_upload(self, new_file_name:str, file_to_ingest, ingest_local_file:bool = False) -> None:
         # store raw uploaded pdf in gcs
         storage_client = storage.Client(credentials=self.credentials)
         bucket = storage_client.bucket(self.secrets["RAW_PDFS_BUCKET_NAME"])
