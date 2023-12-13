@@ -27,6 +27,7 @@ class DeletionSession:
         Orchestrate the deletion session.
         """
 
+        # Check that exactly one argument is provided.
         if (document_name is None and ids_to_delete is None) or (document_name is not None and ids_to_delete is not None):
             raise ValueError("Exactly one argument must be provided.")
 
@@ -34,18 +35,22 @@ class DeletionSession:
             document_name = str(document_name)
             ids_to_delete = self._search_doc_ids(document_name)
 
+        # Delete original file from gcs bucket.
+        print('Deleting from GCS...')
+        self._delete_doc_from_gcs(document_name)
+
         if len(ids_to_delete) == 0:
-            print("No documents to delete.")
+            print("No documents to delete in Firestore and Vector Search.")
             return None
         
         # Delete chunk embedding string matching from firestore.
+        print('Deleting from firestore...')
         self._delete_docs_from_firestore(ids_to_delete)
         
         # Delete chunk embedding from vector store.
+        print('Deleting from Vector Search...')
         self._delete_docs_from_vectorstore(ids_to_delete)
         
-        # Delete original file from gcs bucket.
-        self._delete_doc_from_gcs(document_name)
         print("Deletion session complete.")
         return None
 
