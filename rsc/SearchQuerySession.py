@@ -1,3 +1,7 @@
+# from EmbeddingSession import EmbeddingSession
+# from VectorSearchSession import VectorSearchSession
+# from LLMSession import LLMSession
+
 from rsc.EmbeddingSession import EmbeddingSession
 from rsc.VectorSearchSession import VectorSearchSession
 from rsc.LLMSession import LLMSession
@@ -58,7 +62,8 @@ class SearchQuerySession:
     def _get_doc_from_firestore(self, matched_ids):
         # method to get document from firestore
         if not firebase_admin._apps:
-            app = firebase_admin.initialize_app()
+            credentials = firebase_admin.credentials.Certificate(self.secrets['GCP_CREDENTIAL_FILE'])
+            app = firebase_admin.initialize_app(credentials)
 
         # Setup & auth firestore client.
         db = firestore.client()
@@ -91,6 +96,6 @@ if __name__ == "__main__":
     # cwd = os.getcwd()
     # print(cwd)
 
-    query_session = SearchQuerySession(model_name='text-bison@002')
-    query_session(client_query="How were knights being paid?")
+    query_session = SearchQuerySession(model_name='gemini-pro')
+    query_session(client_query="Who won the nobel peace prize in 2023?")
     print("Hello World!")
