@@ -17,7 +17,6 @@ from firebase_admin import firestore
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-
 class IngestionSession:
     def __init__(self,
                  chunk_size=1000,
@@ -25,7 +24,6 @@ class IngestionSession:
         
         self.secrets = dotenv_values(".env")
         self.credentials, self.project_id = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
-
         self.docai_processor_id = self.secrets['DOCUMENT_AI_PROCESSOR_ID']
         self.docai_processor_version = self.secrets["DOCUMENT_AI_PROCESSOR_VERSION"]
         self.embedding_session = EmbeddingSession()
@@ -33,6 +31,7 @@ class IngestionSession:
         self.chunk_overlap = chunk_overlap
 
     def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False) -> None:
+
 
         print("+++++ Upload raw PDF... +++++")
         self._store_raw_upload(new_file_name=new_file_name, file_to_ingest=file_to_ingest, ingest_local_file=ingest_local_file)
@@ -43,13 +42,15 @@ class IngestionSession:
                       file_path=new_file_name,
                       file_to_ingest=file_to_ingest,
                       ingest_local_file=ingest_local_file)
+        print (document_string)
         
         print("+++++ Chunking Document... +++++")
         list_of_chunks = self._chunk_doc(stringified_doc=document_string,
                                          file_name=new_file_name,
                                          chunk_size=self.chunk_size,
                                          chunk_overlap=self.chunk_overlap)
-
+        
+        print (list_of_chunks)
         print("+++++ Store Embeddings & Document Identifiers in Firestore... +++++")
         self._firestore_index_embeddings(list_of_chunks)
         
@@ -212,19 +213,17 @@ class IngestionSession:
         # method to upsert embeddings to vector search index
 
         index_client = aiplatform_v1.IndexServiceClient(credentials=self.credentials, client_options=dict(
-            api_endpoint=f"europe-west1-aiplatform.googleapis.com"
+            api_endpoint=f"europe-west3-aiplatform.googleapis.com"
         ))
 
-        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/europe-west1/indexes/3441260288706347008"
-        
+        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/europe-west3/indexes/1922051878468714496"
         insert_datapoints_payload = []
-
         for dp in upsert_datapoints:
             dp_dict = json.loads(dp)
             insert_datapoints_payload.append(aiplatform_v1.IndexDatapoint(datapoint_id=dp_dict["id"], feature_vector=dp_dict["embedding"], restricts= []))
 
         upsert_request = aiplatform_v1.UpsertDatapointsRequest(index=index_name, datapoints=insert_datapoints_payload)
-
+        print('test3')
         index_client.upsert_datapoints(request=upsert_request)
 
         return None

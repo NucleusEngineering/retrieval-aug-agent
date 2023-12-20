@@ -7,11 +7,17 @@ import pandas as pd
 from google.cloud import storage
 import google.auth
 
+
 from rsc.SearchQuerySession import SearchQuerySession
 from rsc.IngestionSession import IngestionSession
 
+
+
 secrets = dotenv_values(".env")
-credentials, _ = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_FILE'])
+print (secrets['GCP_CREDENTIAL_FILE'])
+credentials, project_id = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_FILE'])
+print (credentials, project_id)
+
 
 def main(client_query:str) -> None:  
 
@@ -47,8 +53,8 @@ def upload_new_file(new_file:bytes, new_file_name:str) -> None:
 
 st.title('These files are currently in your knowledge base.')
 
-df = pd.DataFrame(get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"]))
-st.dataframe(df)
+#df = pd.DataFrame(get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"]))
+#st.dataframe(df)
 
 
 st.title('Upload a new file to your knowledge base.')
