@@ -51,14 +51,14 @@ def upload_new_file(new_file:bytes, new_file_name:str) -> None:
     return None
 
 
-def fetch_notion_database(new_file_name:str, database_id:str) -> None:
+def fetch_notion_database(database_id:str) -> None:
     notion_retrieval = NotionRetrievalSession()
 
-    notion_data = notion_retrieval(database_id=database_id) 
+    notion_data, notion_page_titles = notion_retrieval(database_id=database_id) 
 
     ingestion = IngestionSession()
 
-    ingestion(new_file_name=new_file_name, ingest_notion_database=True, data_to_ingest=notion_data)
+    ingestion(new_file_name=database_id, ingest_notion_database=True, data_to_ingest=notion_data, notion_page_titles = notion_page_titles)
 
     return None
 
@@ -91,7 +91,7 @@ with st.form("notion_upload_form"):
     if button:
         print (client_database_id )
         client_database_id = client_database_id
-        fetch_notion_database(new_file_name='Placeholder Notion Page name', database_id=client_database_id)
+        fetch_notion_database(database_id=client_database_id)
 
 
 st.title('Ask a question towards your knowledge base.')

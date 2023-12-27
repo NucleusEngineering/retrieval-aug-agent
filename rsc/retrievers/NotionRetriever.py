@@ -60,11 +60,15 @@ class NotionRetrievalSession:
 
         #iterate through all Notion pages within database 
         database_content = []
+        database_pages = []
         for page in pages:
             page_content = []
-            page_id = page["id"]
+            page_title = []
+            #page_id = page["id"]
             props = page["properties"]
             #iterate through all properties within page to find content 
+
+            #content from text fields:
             for majorkey, subdict in props.items(): 
                 key, value = find_key("rich_text", subdict)
                 #check if array is empty in rich text
@@ -72,16 +76,39 @@ class NotionRetrievalSession:
                     prop_content = value[0].get("text").get("content")
                     prop_content_with_key = majorkey + " : " + prop_content 
                     page_content.append(prop_content_with_key)
-        
+
+            #content from title fields
+            for majorkey, subdict in props.items(): 
+                key, value = find_key("title", subdict)
+                #check if array is empty in rich text
+                if not value == None:
+                    prop_content = value[0].get("text").get("content")
+                    prop_content_with_key = majorkey + " : " + prop_content 
+                    page_content.append(prop_content_with_key)
+                    page_title = prop_content 
+
+            #content from select fields
+            for majorkey, subdict in props.items(): 
+                key, value = find_key("select", subdict)
+                #check if array is empty in rich text
+                if not value == None:
+                    prop_content = value.get("name")
+                    prop_content_with_key = majorkey + " : " + prop_content 
+                    page_content.append(prop_content_with_key)
+
             database_content.append(page_content)
+            database_pages.append(page_title)
+
         print(database_content)
-        return database_content
+        return database_content, database_pages
 
+#notion_retrieval = NotionRetrievalSession()
 
+#notion_data = notion_retrieval(database_id="8c4ef50799eb4e04b95659d38c3effc3") 
 
 
 #next steps:
-# include frontend
+# include frontend - check
 # include "name" prop
 # include subpages
 
