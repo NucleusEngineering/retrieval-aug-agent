@@ -10,6 +10,8 @@ import google.auth
 
 from rsc.SearchQuerySession import SearchQuerySession
 from rsc.IngestionSession import IngestionSession
+from rsc.retrievers.NotionRetriever import NotionRetrievalSession
+
 
 
 
@@ -51,6 +53,18 @@ def upload_new_file(new_file:bytes, new_file_name:str) -> None:
     return None
 
 
+def fetch_notion_database(new_file_name:str) -> None:
+    notion_retrieval = NotionRetrievalSession()
+
+    notion_data = notion_retrieval() 
+
+    ingestion = IngestionSession()
+
+    ingestion(new_file_name=new_file_name, ingest_notion_database=True, data_to_ingest=notion_data)
+
+    return None
+
+
 st.title('These files are currently in your knowledge base.')
 
 #df = pd.DataFrame(get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"]))
@@ -68,6 +82,8 @@ with st.form("file_upload_form"):
         upladed_file_name = uploaded_file.name
         uploaded_file_bytes = uploaded_file.getvalue()
         upload_new_file(new_file=uploaded_file_bytes, new_file_name=upladed_file_name)
+        fetch_notion_database(new_file_name = 'Placeholder Notion Page name')
+
 
 
 st.title('Ask a question towards your knowledge base.')

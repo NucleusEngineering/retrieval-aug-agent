@@ -30,20 +30,23 @@ class IngestionSession:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False) -> None:
+    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False, ingest_notion_database: bool = False, data_to_ingest=None) -> None:
 
+        if not ingest_notion_database:
+            print("+++++ Upload raw PDF... +++++")
+            self._store_raw_upload(new_file_name=new_file_name, file_to_ingest=file_to_ingest, ingest_local_file=ingest_local_file)
 
-        print("+++++ Upload raw PDF... +++++")
-        self._store_raw_upload(new_file_name=new_file_name, file_to_ingest=file_to_ingest, ingest_local_file=ingest_local_file)
+            print("+++++ Document OCR... +++++")
+            document_string = self._ocr_pdf(processor_id=self.docai_processor_id,
+                        processor_version=self.docai_processor_version,
+                        file_path=new_file_name,
+                        file_to_ingest=file_to_ingest,
+                        ingest_local_file=ingest_local_file)
+            print (document_string)
+        else:
+            data_array = data_to_ingest[0]
+            document_string = ', '.join(data_array)
 
-        print("+++++ Document OCR... +++++")
-        document_string = self._ocr_pdf(processor_id=self.docai_processor_id,
-                      processor_version=self.docai_processor_version,
-                      file_path=new_file_name,
-                      file_to_ingest=file_to_ingest,
-                      ingest_local_file=ingest_local_file)
-        print (document_string)
-        
         print("+++++ Chunking Document... +++++")
         list_of_chunks = self._chunk_doc(stringified_doc=document_string,
                                          file_name=new_file_name,
@@ -141,7 +144,6 @@ class IngestionSession:
 
     def _chunk_doc(self, stringified_doc:str, file_name, chunk_size, chunk_overlap) -> list:
         # method to chunk a given doc
-
         doc =  Document(page_content=stringified_doc)
         doc.metadata["document_name"] = file_name.split("/")[-1]
 
