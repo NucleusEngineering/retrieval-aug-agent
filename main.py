@@ -13,8 +13,6 @@ from rsc.IngestionSession import IngestionSession
 from rsc.retrievers.NotionRetriever import NotionRetrievalSession
 
 
-
-
 secrets = dotenv_values(".env")
 print (secrets['GCP_CREDENTIAL_FILE'])
 credentials, project_id = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_FILE'])
@@ -53,10 +51,10 @@ def upload_new_file(new_file:bytes, new_file_name:str) -> None:
     return None
 
 
-def fetch_notion_database(new_file_name:str) -> None:
+def fetch_notion_database(new_file_name:str, database_id:str) -> None:
     notion_retrieval = NotionRetrievalSession()
 
-    notion_data = notion_retrieval() 
+    notion_data = notion_retrieval(database_id=database_id) 
 
     ingestion = IngestionSession()
 
@@ -82,8 +80,18 @@ with st.form("file_upload_form"):
         upladed_file_name = uploaded_file.name
         uploaded_file_bytes = uploaded_file.getvalue()
         upload_new_file(new_file=uploaded_file_bytes, new_file_name=upladed_file_name)
-        fetch_notion_database(new_file_name = 'Placeholder Notion Page name')
 
+st.title('Upload data from your Notion database')
+
+with st.form("notion_upload_form"):
+    client_database_id = st.text_input("Database-ID:")
+
+    button = st.form_submit_button('Upload data', help=None, on_click=None, args=None, kwargs=None, type="primary", disabled=False, use_container_width=False)
+
+    if button:
+        print (client_database_id )
+        client_database_id = client_database_id
+        fetch_notion_database(new_file_name='Placeholder Notion Page name', database_id=client_database_id)
 
 
 st.title('Ask a question towards your knowledge base.')

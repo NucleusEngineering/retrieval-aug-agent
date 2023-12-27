@@ -10,11 +10,10 @@ class NotionRetrievalSession:
         
         self.secrets = dotenv_values(".env")
         self.notion_token = self.secrets['NOTION_TOKEN']
-        self.notion_database_id = self.secrets["NOTION_DATABASE_ID"]
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-    def __call__(self):
+    def __call__(self, database_id: str):
        
         headers = {
             "Authorization": "Bearer " + self.notion_token,
@@ -26,7 +25,7 @@ class NotionRetrievalSession:
             """
             If num_pages is None, get all pages, otherwise just the defined number.
             """
-            url = f"https://api.notion.com/v1/databases/{self.notion_database_id}/query"
+            url = f"https://api.notion.com/v1/databases/{database_id}/query"
 
             get_all = num_pages is None
             page_size = 100 if get_all else num_pages
@@ -39,7 +38,7 @@ class NotionRetrievalSession:
             results = data["results"]
             while data["has_more"] and get_all:
                 payload = {"page_size": page_size, "start_cursor": data["next_cursor"]}
-                url = f"https://api.notion.com/v1/databases/{self.notion_database_id}/query"
+                url = f"https://api.notion.com/v1/databases/{database_id}/query"
                 response = requests.post(url, json=payload, headers=headers)
                 data = response.json()
                 results.extend(data["results"])
@@ -59,7 +58,7 @@ class NotionRetrievalSession:
                         return f"{child_key}.{sub_key}", sub_value
             return None, None
 
-        #iterate through all Notion pages within database
+        #iterate through all Notion pages within database 
         database_content = []
         for page in pages:
             page_content = []
@@ -79,12 +78,15 @@ class NotionRetrievalSession:
         return database_content
 
 
-test = NotionRetrievalSession()
-test()
 
 
 #next steps:
-# -chunk the notion strings
+# include frontend
+# include "name" prop
+# include subpages
+
+
+
 
 
 
