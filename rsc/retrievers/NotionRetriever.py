@@ -109,7 +109,8 @@ class NotionRetrievalSession:
 
 #next steps:
 # include frontend - check
-# include "name" prop
+# include "name" prop - check
+# having database_name in metadata as source - check
 # include subpages
 
 
