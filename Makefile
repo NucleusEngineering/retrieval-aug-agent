@@ -23,6 +23,9 @@ service-account:
 	gcloud projects add-iam-policy-binding $$(gcloud config get-value project) \
 		--member serviceAccount:retrieval-aug-agent@$$(gcloud config get-value project).iam.gserviceaccount.com \
 		--role roles/storage.objectAdmin
+	gcloud projects add-iam-policy-binding $$(gcloud config get-value project) \
+		--member serviceAccount:retrieval-aug-agent@$$(gcloud config get-value project).iam.gserviceaccount.com \
+		--role roles/documentai.editor
 
 repo:
 	gcloud artifacts repositories create retrieval-aug-agent \
