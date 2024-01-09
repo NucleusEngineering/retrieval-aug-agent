@@ -1,10 +1,25 @@
+# Copyright 2024 Google
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from click import prompt
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.llms import VertexAI
 
 from vertexai.preview.generative_models import GenerativeModel
 
-QA_PROMPT_TEMPLATE =  """SYSTEM: You are an intelligent assistant helping the users with their questions on the content of given context.
+QA_PROMPT_TEMPLATE = """SYSTEM: You are an intelligent assistant helping the users with their questions on the content of given context.
 
 Question: {question}
 
@@ -33,34 +48,77 @@ class LLMSession:
         self.context_docs = context_docs
         self.prompt_template = QA_PROMPT_TEMPLATE
         self.model_name = model_name
-    
+
     def llm_prediction(self,
-                       max_output_tokens:int=1024,
-                       temperature:float=0.2,
-                       top_p:float=0.8, top_k:int=40) -> dict:
-        
+                       max_output_tokens: int = 1024,
+                       temperature: float = 0.2,
+                       top_p: float = 0.8, top_k: int = 40) -> dict:
+
         if self.model_name == "gemini-pro":
 
             model = GenerativeModel("gemini-pro")
             responses = model.generate_content(
-            self.prompt_template.format(question=self.client_query_string, context=self.context_docs),
-            generation_config={
-                "max_output_tokens": 2048,
-                "temperature": 0.9,
-                "top_p": 1
-            },
+                self.prompt_template.format(
+                    question=self.client_query_string, context=self.context_docs),
+                generation_config={
+                    "max_output_tokens": 2048,
+                    "temperature": 0.9,
+                    "top_p": 1
+                },
             )
-            response = {"text":responses.text}
+            response = {"text": responses.text}
         else:
             llm = VertexAI(model_name=self.model_name,
-                        max_output_tokens=max_output_tokens,
-                        temperature=temperature,
-                        top_p=top_p,
-                        top_k=top_k,
-                        verbose=True
-                        )
+                           max_output_tokens=max_output_tokens,
+                           temperature=temperature,
+                           top_p=top_p,
+                           top_k=top_k,
+                           verbose=True
+                           )
 
-            llm_chain = LLMChain(llm=llm, prompt=PromptTemplate.from_template(self.prompt_template))
+            llm_chain = LLMChain(
+                llm=llm, prompt=PromptTemplate.from_template(self.prompt_template))
 
-            response = llm_chain({"question":self.client_query_string, "context":self.context_docs})
+            response = llm_chain(
+                {"question": self.client_query_string, "context": self.context_docs})
         return response
+
+    def llm_function_call(self, tools: list):
+
+        model = GenerativeModel("gemini-pro")
+
+        print("++++ Function Call Session Prompt ++++")
+        print(self.client_query_string)
+
+        model_response = model.generate_content(
+            self.client_query_string,
+            generation_config={"temperature": 0},
+            tools=tools
+        )
+
+        print(model_response)
+
+        try: 
+            return model_response.text
+        except:
+            return self._extract_arguments_from_model_response(model_response)
+
+    def _extract_arguments_from_model_response(self, model_response) -> dict:
+        """
+        Extract the raw function name and function calling arguments from the model response.
+        """
+        res = model_response.candidates[0].content.parts[0].function_call.args
+
+        func_arguments = {'function_name': model_response.candidates[0].content.parts[0].function_call.name,
+                          'function_arguments': {i: res[i] for i in res}
+                          }
+
+        return func_arguments
+
+
+
+if __name__ == "__main__":
+    prompt = "Which is the city with the most bridges?"
+    llm = LLMSession(client_query_string=prompt, context_docs=None, model_name='text-bison@002')
+    response = llm.llm_prediction()
+    print(response)
