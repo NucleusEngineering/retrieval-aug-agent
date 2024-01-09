@@ -1,13 +1,13 @@
 # Retrieval Augmented Agent
 
-This is an implementation of the Retrieval Augmented Generation (RAG) pattern to power a Q&A across mutliple knowlegde management platform.
+This is an implementation of the Retrieval Augmented Generation (RAG) pattern to power a Q&A across mutliple knowledge management platforms.
 
 Currently we are connecting a bucket of PDFs and a Notion DB as knowledge base to answer questions on.
 
-Expected behaviour will be that the model responds to questions exclusively based on the data contained in the knowlegde base.
+Expected behaviour will be that the model responds to questions exclusively based on the data contained in the knowledge base.
 
 ## Architecture RAG Q&A
-The full tooling is using Google Cloud Platform (GCP) Native Tech.
+The full tooling is using Google Cloud Platform (GCP) native technology.
 
 * Document OCR: [Document AI](https://cloud.google.com/document-ai/docs/overview)
 * Generation of Content & User Query embeddings: [PaLM Embedding Model](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings)

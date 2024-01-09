@@ -14,7 +14,9 @@
 
 from google.cloud import aiplatform
 
+
 class VectorSearchSession:
+
     def __init__(self,
                  gcp_project_id,
                  gcp_project_number,
@@ -33,7 +35,9 @@ class VectorSearchSession:
         self.deployed_index_id = deployed_index_id # vector search index deployed index id (aphanumeric)
         self.api_endpoint = api_endpoint # gcp me api endpoint, depending on region
 
-    def find_matches(self, query_vec: list, num_neighbors: int = 10, match_thresh: float = .6) -> list:
+    def find_matches(
+        self, query_vec: list, num_neighbors: int = 10, match_thresh: float = 0.6
+    ) -> list:
         """
         Finding nearest neighbours based on input vector (embedded client query).
 
@@ -51,6 +55,7 @@ class VectorSearchSession:
         matched_ids : list
             list of matched ids
         """
+
         print (self.gcp_project_number)
         index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=f"projects/{self.gcp_project_number}/locations/europe-west3/indexEndpoints/{self.index_endpoint_id}",
                                                                 project=self.gcp_project_id,

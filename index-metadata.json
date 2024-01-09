@@ -1,0 +1,15 @@
+{
+  "contentsDeltaUri": "gs://retrieval-agent-demo-raw-pdfs-bucket/path",
+  "config": {
+    "dimensions": 768,
+    "approximateNeighborsCount": 150,
+    "distanceMeasureType": "DOT_PRODUCT_DISTANCE",
+    "shardSize": "SHARD_SIZE_SMALL",
+    "algorithm_config": {
+      "treeAhConfig": {
+        "leafNodeEmbeddingCount": 5000,
+        "leafNodesToSearchPercent": 3
+      }
+    }
+  }
+}
