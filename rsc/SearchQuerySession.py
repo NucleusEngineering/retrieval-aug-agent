@@ -60,7 +60,7 @@ class SearchQuerySession:
             app = firebase_admin.initialize_app()
 
         # Setup & auth firestore client.
-        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials)
+        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
 
         # Pull relevant docs from Firestore collection.
         relevant_docs = []

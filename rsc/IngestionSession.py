@@ -208,8 +208,9 @@ class IngestionSession:
         if not firebase_admin._apps:
             app = firebase_admin.initialize_app()
 
-        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials)
-        
+        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
+
+    
         for split in doc_splits:
             data = {"id": split.metadata["chunk_identifier"],
                     "document_name": split.metadata["document_name"],
@@ -229,7 +230,7 @@ class IngestionSession:
             api_endpoint=f"europe-west3-aiplatform.googleapis.com"
         ))
 
-        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/europe-west3/indexes/1922051878468714496"
+        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/europe-west3/indexes/{self.secrets['VECTOR_SEARCH_INDEX_ID']}"
         insert_datapoints_payload = []
         for dp in upsert_datapoints:
             dp_dict = json.loads(dp)
