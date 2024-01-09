@@ -49,56 +49,58 @@ class LLMSession:
         self.prompt_template = QA_PROMPT_TEMPLATE
         self.model_name = model_name
 
-    def llm_prediction(self,
-                       max_output_tokens: int = 1024,
-                       temperature: float = 0.2,
-                       top_p: float = 0.8, top_k: int = 40) -> dict:
-
+    def llm_prediction(
+        self,
+        max_output_tokens: int = 1024,
+        temperature: float = 0.2,
+        top_p: float = 0.8,
+        top_k: int = 40,
+    ) -> dict:
         if self.model_name == "gemini-pro":
-
             model = GenerativeModel("gemini-pro")
             responses = model.generate_content(
                 self.prompt_template.format(
-                    question=self.client_query_string, context=self.context_docs),
+                    question=self.client_query_string, context=self.context_docs
+                ),
                 generation_config={
                     "max_output_tokens": 2048,
                     "temperature": 0.9,
-                    "top_p": 1
+                    "top_p": 1,
                 },
             )
             response = {"text": responses.text}
         else:
-            llm = VertexAI(model_name=self.model_name,
-                           max_output_tokens=max_output_tokens,
-                           temperature=temperature,
-                           top_p=top_p,
-                           top_k=top_k,
-                           verbose=True
-                           )
+            llm = VertexAI(
+                model_name=self.model_name,
+                max_output_tokens=max_output_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                verbose=True,
+            )
 
             llm_chain = LLMChain(
-                llm=llm, prompt=PromptTemplate.from_template(self.prompt_template))
+                llm=llm, prompt=PromptTemplate.from_template(self.prompt_template)
+            )
 
             response = llm_chain(
-                {"question": self.client_query_string, "context": self.context_docs})
+                {"question": self.client_query_string, "context": self.context_docs}
+            )
         return response
 
     def llm_function_call(self, tools: list):
-
         model = GenerativeModel("gemini-pro")
 
         print("++++ Function Call Session Prompt ++++")
         print(self.client_query_string)
 
         model_response = model.generate_content(
-            self.client_query_string,
-            generation_config={"temperature": 0},
-            tools=tools
+            self.client_query_string, generation_config={"temperature": 0}, tools=tools
         )
 
         print(model_response)
 
-        try: 
+        try:
             return model_response.text
         except:
             return self._extract_arguments_from_model_response(model_response)
@@ -109,16 +111,20 @@ class LLMSession:
         """
         res = model_response.candidates[0].content.parts[0].function_call.args
 
-        func_arguments = {'function_name': model_response.candidates[0].content.parts[0].function_call.name,
-                          'function_arguments': {i: res[i] for i in res}
-                          }
+        func_arguments = {
+            "function_name": model_response.candidates[0]
+            .content.parts[0]
+            .function_call.name,
+            "function_arguments": {i: res[i] for i in res},
+        }
 
         return func_arguments
 
 
-
 if __name__ == "__main__":
     prompt = "Which is the city with the most bridges?"
-    llm = LLMSession(client_query_string=prompt, context_docs=None, model_name='text-bison@002')
+    llm = LLMSession(
+        client_query_string=prompt, context_docs=None, model_name="text-bison@002"
+    )
     response = llm.llm_prediction()
     print(response)
