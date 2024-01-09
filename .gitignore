@@ -1,2 +1,4 @@
 .env
 **.pyc
+.vscode/**
+/raa_venv/**
