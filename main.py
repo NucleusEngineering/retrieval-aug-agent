@@ -22,8 +22,11 @@ import pandas as pd
 from google.cloud import storage
 import google.auth
 
+
 from rsc.SearchQuerySession import SearchQuerySession
 from rsc.IngestionSession import IngestionSession
+from rsc.retrievers.NotionRetriever import NotionRetrievalSession
+
 from rsc.DeletionSession import DeletionSession
 
 
@@ -127,6 +130,18 @@ def upload_new_file(new_file:bytes, new_file_name:str) -> None:
     return None
 
 
+def fetch_notion_database(database_id:str) -> None:
+    notion_retrieval = NotionRetrievalSession()
+
+    notion_data, notion_page_titles = notion_retrieval(database_id=database_id) 
+
+    ingestion = IngestionSession()
+
+    ingestion(new_file_name=database_id, ingest_notion_database=True, data_to_ingest=notion_data, notion_page_titles = notion_page_titles)
+
+    return None
+
+
 def delete_file(document_name:str) -> None:
     print(f'deletion {document_name}')
     
@@ -140,8 +155,8 @@ def delete_file(document_name:str) -> None:
 st.title('These files are currently in your knowledge base.')
 
 current_files = get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"])
-# df = pd.DataFrame(current_files)
-# st.dataframe(df)
+df = pd.DataFrame(current_files)
+st.dataframe(df)
 
 DocPreview(list_of_docs=current_files).render()
 
@@ -157,6 +172,18 @@ with st.form("file_upload_form"):
         upladed_file_name = uploaded_file.name
         uploaded_file_bytes = uploaded_file.getvalue()
         upload_new_file(new_file=uploaded_file_bytes, new_file_name=upladed_file_name)
+
+st.title('Upload data from your Notion database')
+
+with st.form("notion_upload_form"):
+    client_database_id = st.text_input("Database-ID:")
+
+    button = st.form_submit_button('Upload data', help=None, on_click=None, args=None, kwargs=None, type="primary", disabled=False, use_container_width=False)
+
+    if button:
+        print (client_database_id )
+        client_database_id = client_database_id
+        fetch_notion_database(database_id=client_database_id)
 
 
 st.title('Ask a question towards your knowledge base.')

@@ -21,8 +21,8 @@ class VectorSearchSession:
                  index_endpoint_id,
                  deployed_index_id,
                  credentials,
-                 gcp_region="europe-west1",
-                 api_endpoint="1665184178.europe-west1-886845446187.vdb.vertexai.goog",
+                 gcp_region="europe-west3",
+                 api_endpoint="1734329425.europe-west3-412810111069.vdb.vertexai.goog",
                  ):
         
         self.gcp_project_id = gcp_project_id # the gcp project that hosts the matching engine instance
@@ -51,13 +51,12 @@ class VectorSearchSession:
         matched_ids : list
             list of matched ids
         """
-
-        index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=f"projects/{self.gcp_project_number}/locations/europe-west1/indexEndpoints/{self.index_endpoint_id}",
+        print (self.gcp_project_number)
+        index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=f"projects/{self.gcp_project_number}/locations/europe-west3/indexEndpoints/{self.index_endpoint_id}",
                                                                 project=self.gcp_project_id,
                                                                 location=self.gcp_region,
                                                                 credentials=self.credentials
                                                                 )
-
         res = index_endpoint.find_neighbors(deployed_index_id=self.deployed_index_id, queries=[query_vec], num_neighbors=num_neighbors)
 
         matched_ids = [match.id for match in res[0] if match.distance >= match_thresh]
