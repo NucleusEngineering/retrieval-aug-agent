@@ -1,10 +1,20 @@
-# Retrieval Augmented Agent
+# Retrieval Augmented QA & Agent
 
 This is an implementation of the Retrieval Augmented Generation (RAG) pattern to power a Q&A across mutliple knowledge management platforms.
 
-Currently we are connecting a bucket of PDFs and a Notion DB as knowledge base to answer questions on.
+On top we are building (wip) an Retrieval Augmented Agent that is able to take actions instructured by natural language in the underlying knowledge base.
 
-Expected behaviour will be that the model responds to questions exclusively based on the data contained in the knowledge base.
+At this point we developed integrations to connect a bucket of PDFs and a Notion DB as knowledge base to answer questions and take actions.
+
+Expected behaviour will be that the model responds to questions and takes actions exclusively based on the data contained in the knowledge base.
+
+## Solution Demo
+
+The Streamlit UI allows adding and deleting PDF files to and from the knowlegdge base. To connect a Notion DB enter the respective Database ID.
+
+Once your knowledgebase is connected succesfully select an LLM and enter a query.
+
+![user interface demo](./ui_demo.png)
 
 ## Architecture RAG Q&A
 The full tooling is using Google Cloud Platform (GCP) native technology.
