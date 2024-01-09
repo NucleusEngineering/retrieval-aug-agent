@@ -5,6 +5,7 @@ endif
 
 config:
 	gcloud config set project ${GCP_PROJECT_ID}
+	gcloud config set ai/region ${GCP_REGION}
 	gcloud config set run/region ${GCP_REGION}
 	gcloud config set artifacts/location ${GCP_REGION}
 
@@ -28,11 +29,27 @@ repo:
 		--repository-format docker
 
 bucket:
-	gcloud storage buckets create gs://${RAW_PDFS_BUCKET_NAME}
+	gcloud storage buckets create gs://${RAW_PDFS_BUCKET_NAME} \
+		--location ${GCP_REGION}
+	gsutil cp null.json gs://${RAW_PDFS_BUCKET_NAME}/path/init.json
 
 database:
 	gcloud firestore databases create \
 		--location ${GCP_MULTI_REGION}
+
+index:
+	gcloud alpha ai indexes create \
+		--display-name retrieval-agent-index \
+		--description "RAG DEMO: Brand name PDFs: 768d streaming update index on Vertex Vector Search" \
+		--index-update-method stream_update \
+		--metadata-file index-metadata.json 
+
+endpoint:
+	gcloud alpha ai index-endpoints create \
+		--display-name retrieval-agent-demo \
+		--description "Endpoint for RAG-DEMO Vector Search index" \
+		--public-endpoint-enabled
+	printf "\n\tINFO\tEndpoint is $$(gcloud alpha ai index-endpoints list --format json | jq -r '.[].name' | grep -Po '\K(\d+)$$')\n\n"
 
 build:
 	gcloud builds submit . \
@@ -44,6 +61,6 @@ deploy:
 		--service-account retrieval-aug-agent@$$(gcloud config get-value project).iam.gserviceaccount.com \
 		--allow-unauthenticated
 
-all: config init service-account repo bucket database build deploy
+all: config init service-account repo bucket database index endpoint build deploy
 
-.PHONY: config init service-account repo bucket database build deploy
+.PHONY: config init service-account repo bucket database index endpoint build deploy
