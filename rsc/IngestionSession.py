@@ -31,7 +31,6 @@ from firebase_admin import firestore
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-
 class IngestionSession:
     def __init__(self, chunk_size=1000, chunk_overlap=50):
         self.secrets = dotenv_values(".env")
@@ -47,41 +46,49 @@ class IngestionSession:
         )
         self.project_id = str(self.secrets["GCP_PROJECT_ID"])
 
-        self.docai_processor_id = str(self.secrets["DOCUMENT_AI_PROCESSOR_ID"])
-        self.docai_processor_version = str(
-            self.secrets["DOCUMENT_AI_PROCESSOR_VERSION"]
-        )
+        self.docai_processor_id = str(self.secrets['DOCUMENT_AI_PROCESSOR_ID'])
+        self.docai_processor_version = str(self.secrets["DOCUMENT_AI_PROCESSOR_VERSION"])
+        self.gcp_multiregion = str(self.secrets["GCP_MULTIREGION"])
         self.embedding_session = EmbeddingSession()
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-    def __call__(
-        self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False
-    ) -> None:
-        print("+++++ Upload raw PDF... +++++")
-        self._store_raw_upload(
-            new_file_name=new_file_name,
-            file_to_ingest=file_to_ingest,
-            ingest_local_file=ingest_local_file,
-        )
+    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False, ingest_notion_database: bool = False, data_to_ingest=None, notion_page_titles=None) -> None:
 
-        print("+++++ Document OCR... +++++")
-        document_string = self._ocr_pdf(
-            processor_id=self.docai_processor_id,
-            processor_version=self.docai_processor_version,
-            file_path=new_file_name,
-            file_to_ingest=file_to_ingest,
-            ingest_local_file=ingest_local_file,
-        )
+        if not ingest_notion_database:
+            print("+++++ Upload raw PDF... +++++")
+            self._store_raw_upload(new_file_name=new_file_name, file_to_ingest=file_to_ingest, ingest_local_file=ingest_local_file)
 
-        print("+++++ Chunking Document... +++++")
-        list_of_chunks = self._chunk_doc(
-            stringified_doc=document_string,
-            file_name=new_file_name,
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-        )
+            print("+++++ Document OCR... +++++")
+            document_string = self._ocr_pdf(processor_id=self.docai_processor_id,
+                        processor_version=self.docai_processor_version,
+                        location=self.gcp_multiregion,
+                        file_path=new_file_name,
+                        file_to_ingest=file_to_ingest,
+                        ingest_local_file=ingest_local_file)
+            print (document_string)
 
+            print("+++++ Chunking Document... +++++")
+            list_of_chunks = self._chunk_doc(stringified_doc=document_string,
+                                            file_name=new_file_name,
+                                            chunk_size=self.chunk_size,
+                                            chunk_overlap=self.chunk_overlap)
+        else:
+            list_of_chunks = [] 
+            counter = 0
+            for page in data_to_ingest:
+                notion_page_title = notion_page_titles[counter]
+                counter += 1
+
+                document_string = ', '.join(page)
+                print("+++++ Chunking Document... +++++")
+                chunk = self._chunk_doc(stringified_doc=document_string,
+                                                file_name=new_file_name + ': ' + notion_page_title,
+                                                chunk_size=self.chunk_size,
+                                                chunk_overlap=self.chunk_overlap)
+                list_of_chunks.append(chunk[0])
+                 
+        print (list_of_chunks)
         print("+++++ Store Embeddings & Document Identifiers in Firestore... +++++")
         self._firestore_index_embeddings(list_of_chunks)
 
@@ -139,16 +146,15 @@ class IngestionSession:
 
         return result.document
 
-    def _ocr_pdf(
-        self,
-        processor_id: str,
-        processor_version: str,
-        file_path: str,
-        location: str = "eu",
-        mime_type: str = "application/pdf",
-        file_to_ingest=None,
-        ingest_local_file: bool = False,
-    ) -> str:
+    def _ocr_pdf(self,
+                 processor_id: str,
+                 processor_version: str,
+                 file_path: str,
+                 location: str,
+                 mime_type: str = "application/pdf",
+                 file_to_ingest=None,
+                 ingest_local_file: bool = False) -> str:
+        
         process_options = documentai.ProcessOptions(
             ocr_config=documentai.OcrConfig(
                 enable_native_pdf_parsing=True,
@@ -180,8 +186,7 @@ class IngestionSession:
         self, stringified_doc: str, file_name, chunk_size, chunk_overlap
     ) -> list:
         # method to chunk a given doc
-
-        doc = Document(page_content=stringified_doc)
+        doc =  Document(page_content=stringified_doc)
         doc.metadata["document_name"] = file_name.split("/")[-1]
 
         text_splitter = RecursiveCharacterTextSplitter(
@@ -260,8 +265,9 @@ class IngestionSession:
             )
             app = firebase_admin.initialize_app(credentials)
 
-        db = firestore.client()
+        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
 
+    
         for split in doc_splits:
             data = {
                 "id": split.metadata["chunk_identifier"],
@@ -281,15 +287,13 @@ class IngestionSession:
     def _vector_index_streaming_upsert(self, upsert_datapoints: list) -> None:
         # method to upsert embeddings to vector search index
 
-        index_client = aiplatform_v1.IndexServiceClient(
-            credentials=self.credentials,
-            client_options=dict(api_endpoint=f"europe-west1-aiplatform.googleapis.com"),
-        )
 
-        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/europe-west1/indexes/3441260288706347008"
+        index_client = aiplatform_v1.IndexServiceClient(credentials=self.credentials, client_options=dict(
+            api_endpoint=f"{self.secrets['GCP_REGION']}-aiplatform.googleapis.com"
+        ))
 
+        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/{self.secrets['GCP_REGION']}/indexes/{self.secrets['VECTOR_SEARCH_INDEX_ID']}"
         insert_datapoints_payload = []
-
         for dp in upsert_datapoints:
             dp_dict = json.loads(dp)
             insert_datapoints_payload.append(
@@ -299,11 +303,9 @@ class IngestionSession:
                     restricts=[],
                 )
             )
-
-        upsert_request = aiplatform_v1.UpsertDatapointsRequest(
-            index=index_name, datapoints=insert_datapoints_payload
-        )
-
+          
+        upsert_request = aiplatform_v1.UpsertDatapointsRequest(index=index_name, datapoints=insert_datapoints_payload)
+        print('test3')
         index_client.upsert_datapoints(request=upsert_request)
 
         return None

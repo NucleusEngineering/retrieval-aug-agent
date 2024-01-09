@@ -33,10 +33,11 @@ class DeletionSession:
             )
             app = firebase_admin.initialize_app(credentials)
 
-        self.credentials, self.project_id = google.auth.load_credentials_from_file(
-            self.secrets["GCP_CREDENTIAL_FILE"]
-        )
-        self.firestore_client = firestore.client()
+
+        self.credentials, self.project_id = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
+        # self.firestore_client = firestore.client()
+        self.firestore_client = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
+
         self.firestore_collection_name = self.secrets["FIRESTORE_COLLECTION_NAME"]
 
     def __call__(self, document_name=None, ids_to_delete=None) -> None:
@@ -131,13 +132,13 @@ class DeletionSession:
         Method to delete the documents from the vectorstore.
         """
         # Create a client
-        index_client = aiplatform_v1.IndexServiceClient(
-            credentials=self.credentials,
-            client_options=dict(api_endpoint=f"europe-west1-aiplatform.googleapis.com"),
-        )
 
-        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/europe-west1/indexes/3441260288706347008"
+        index_client = aiplatform_v1.IndexServiceClient(credentials=self.credentials, client_options=dict(
+            api_endpoint=f"{self.secrets['GCP_REGION']}-aiplatform.googleapis.com"
+        ))
 
+        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/{self.secrets['GCP_REGION']}/indexes/{self.secrets['VECTOR_SEARCH_INDEX_ID']}"
+        
         # Initialize request argument(s)
         deletion_request = aiplatform_v1.RemoveDatapointsRequest(
             index=index_name,
