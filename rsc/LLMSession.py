@@ -2,6 +2,8 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.llms import VertexAI
 
+from vertexai.preview.generative_models import GenerativeModel
+
 QA_PROMPT_TEMPLATE =  """SYSTEM: You are an intelligent assistant helping the users with their questions on the content of given context.
 
 Question: {question}
@@ -26,25 +28,39 @@ Helpful & specific Answer:"""
 
 
 class LLMSession:
-    def __init__(self, client_query_string, context_docs):
+    def __init__(self, client_query_string: str, context_docs, model_name: str):
         self.client_query_string = client_query_string
         self.context_docs = context_docs
         self.prompt_template = QA_PROMPT_TEMPLATE
+        self.model_name = model_name
     
     def llm_prediction(self,
                        max_output_tokens:int=1024,
                        temperature:float=0.2,
-                       top_p:float=0.8, top_k:int=40) -> str:
+                       top_p:float=0.8, top_k:int=40) -> dict:
+        
+        if self.model_name == "gemini-pro":
 
-        llm = VertexAI(model_name="text-bison@001",
-                       max_output_tokens=max_output_tokens,
-                       temperature=temperature,
-                       top_p=top_p,
-                       top_k=top_k,
-                       verbose=True
-                       )
+            model = GenerativeModel("gemini-pro")
+            responses = model.generate_content(
+            self.prompt_template.format(question=self.client_query_string, context=self.context_docs),
+            generation_config={
+                "max_output_tokens": 2048,
+                "temperature": 0.9,
+                "top_p": 1
+            },
+            )
+            response = {"text":responses.text}
+        else:
+            llm = VertexAI(model_name=self.model_name,
+                        max_output_tokens=max_output_tokens,
+                        temperature=temperature,
+                        top_p=top_p,
+                        top_k=top_k,
+                        verbose=True
+                        )
 
-        llm_chain = LLMChain(llm=llm, prompt=PromptTemplate.from_template(self.prompt_template))
+            llm_chain = LLMChain(llm=llm, prompt=PromptTemplate.from_template(self.prompt_template))
 
-        response = llm_chain({"question":self.client_query_string, "context":self.context_docs})
+            response = llm_chain({"question":self.client_query_string, "context":self.context_docs})
         return response

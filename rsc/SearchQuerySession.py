@@ -1,3 +1,7 @@
+# from EmbeddingSession import EmbeddingSession
+# from VectorSearchSession import VectorSearchSession
+# from LLMSession import LLMSession
+
 from rsc.EmbeddingSession import EmbeddingSession
 from rsc.VectorSearchSession import VectorSearchSession
 from rsc.LLMSession import LLMSession
@@ -9,7 +13,7 @@ from firebase_admin import firestore
 import google.auth
 
 class SearchQuerySession:
-    def __init__(self):
+    def __init__(self, model_name: str):
         self.embedding_session = EmbeddingSession()
         self.secrets = dotenv_values(".env")
         self.credentials, _ = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
@@ -19,8 +23,9 @@ class SearchQuerySession:
                                                          index_endpoint_id=self.secrets["VECTOR_SEARCH_INDEX_ENDPOINT_ID"],
                                                          deployed_index_id=self.secrets["VECTOR_SEARCH_DEPLOYED_INDEX_ID"])
         self.firestore_collection_name = self.secrets["FIRESTORE_COLLECTION_NAME"]
+        self.model_name = model_name
 
-    def __call__(self, client_query) -> dict:
+    def __call__(self, client_query) -> tuple:
         answer, sources = self._main(client_query)
         print(answer)
         print(sources)
@@ -47,7 +52,7 @@ class SearchQuerySession:
 
         # call LLM with final prompt
         print("+++++ Prompting LLM with final prompt... +++++")
-        llm_answer = LLMSession(client_query_string=client_query, context_docs=joined_docs_content).llm_prediction(max_output_tokens=1024,
+        llm_answer = LLMSession(client_query_string=client_query, context_docs=joined_docs_content, model_name=self.model_name).llm_prediction(max_output_tokens=1024,
                                                                                                                     temperature=0.1,
                                                                                                                     top_p=0.6,
                                                                                                                     top_k=20)
@@ -57,7 +62,8 @@ class SearchQuerySession:
     def _get_doc_from_firestore(self, matched_ids):
         # method to get document from firestore
         if not firebase_admin._apps:
-            app = firebase_admin.initialize_app()
+            credentials = firebase_admin.credentials.Certificate(self.secrets['GCP_CREDENTIAL_FILE'])
+            app = firebase_admin.initialize_app(credentials)
 
         # Setup & auth firestore client.
         db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
@@ -90,6 +96,6 @@ if __name__ == "__main__":
     # cwd = os.getcwd()
     # print(cwd)
 
-    query_session = SearchQuerySession()
-    query_session(client_query="How were knights being paid?")
+    query_session = SearchQuerySession(model_name='gemini-pro')
+    query_session(client_query="Who won the nobel peace prize in 2023?")
     print("Hello World!")

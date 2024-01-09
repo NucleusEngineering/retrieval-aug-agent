@@ -23,9 +23,17 @@ class IngestionSession:
                  chunk_overlap=50):
         
         self.secrets = dotenv_values(".env")
-        self.credentials, self.project_id = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
-        self.docai_processor_id = self.secrets['DOCUMENT_AI_PROCESSOR_ID']
-        self.docai_processor_version = self.secrets["DOCUMENT_AI_PROCESSOR_VERSION"]
+
+        if not firebase_admin._apps:
+            credentials = firebase_admin.credentials.Certificate(self.secrets['GCP_CREDENTIAL_FILE'])
+            app = firebase_admin.initialize_app(credentials)
+
+        self.credentials, _ = google.auth.load_credentials_from_file(self.secrets['GCP_CREDENTIAL_FILE'])
+        self.project_id = str(self.secrets["GCP_PROJECT_ID"])
+
+        self.docai_processor_id = str(self.secrets['DOCUMENT_AI_PROCESSOR_ID'])
+        self.docai_processor_version = str(self.secrets["DOCUMENT_AI_PROCESSOR_VERSION"])
+        self.gcp_multiregion = str(self.secrets["GCP_MULTIREGION"])
         self.embedding_session = EmbeddingSession()
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
@@ -39,6 +47,7 @@ class IngestionSession:
             print("+++++ Document OCR... +++++")
             document_string = self._ocr_pdf(processor_id=self.docai_processor_id,
                         processor_version=self.docai_processor_version,
+                        location=self.gcp_multiregion,
                         file_path=new_file_name,
                         file_to_ingest=file_to_ingest,
                         ingest_local_file=ingest_local_file)
@@ -74,6 +83,8 @@ class IngestionSession:
         print("+++++ Updating Vector Search Index... +++++")
         self._vector_index_streaming_upsert(embeddings_to_ingest)
 
+        print("+++++ Ingestion Done. +++++")
+
         return None
 
     def _process_document(self,
@@ -97,7 +108,7 @@ class IngestionSession:
         # file_path = file_path.getvalue()
 
         name = client.processor_version_path(
-            self.secrets["GCP_PROJECT_ID"], location, processor_id, processor_version
+            self.project_id, location, processor_id, processor_version
         )
 
         if ingest_local_file:
@@ -121,7 +132,7 @@ class IngestionSession:
                  processor_id: str,
                  processor_version: str,
                  file_path: str,
-                 location: str = "eu",
+                 location: str,
                  mime_type: str = "application/pdf",
                  file_to_ingest=None,
                  ingest_local_file: bool = False) -> str:
@@ -183,14 +194,21 @@ class IngestionSession:
 
         return embedded_docs
     
-    def _store_raw_upload(self, new_file_name:str, file_to_ingest=None, ingest_local_file:bool = False) -> None:
+    def _store_raw_upload(self, new_file_name:str, file_to_ingest, ingest_local_file:bool = False) -> None:
         # store raw uploaded pdf in gcs
         storage_client = storage.Client(credentials=self.credentials)
         bucket = storage_client.bucket(self.secrets["RAW_PDFS_BUCKET_NAME"])
 
         print(new_file_name)
 
-        blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
+        # string = "This is a string containing a substring."
+        # substring = "substring"
+
+        if '.pdf' in new_file_name:
+            blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
+        else:
+            new_file_name = new_file_name + ".pdf"
+            blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
 
         print(ingest_local_file)
 
@@ -206,7 +224,8 @@ class IngestionSession:
         # upload embeddings to firestore
 
         if not firebase_admin._apps:
-            app = firebase_admin.initialize_app()
+            credentials = firebase_admin.credentials.Certificate(self.secrets['GCP_CREDENTIAL_FILE'])
+            app = firebase_admin.initialize_app(credentials)
 
         db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
 
@@ -227,10 +246,10 @@ class IngestionSession:
         # method to upsert embeddings to vector search index
 
         index_client = aiplatform_v1.IndexServiceClient(credentials=self.credentials, client_options=dict(
-            api_endpoint=f"europe-west3-aiplatform.googleapis.com"
+            api_endpoint=f"{self.secrets['GCP_REGION']}-aiplatform.googleapis.com"
         ))
 
-        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/europe-west3/indexes/{self.secrets['VECTOR_SEARCH_INDEX_ID']}"
+        index_name = f"projects/{self.secrets['GCP_PROJECT_NUMBER']}/locations/{self.secrets['GCP_REGION']}/indexes/{self.secrets['VECTOR_SEARCH_INDEX_ID']}"
         insert_datapoints_payload = []
         for dp in upsert_datapoints:
             dp_dict = json.loads(dp)
@@ -244,7 +263,6 @@ class IngestionSession:
 
 
 if __name__ == "__main__":
-
     cwd = os.getcwd()
     print(cwd)
 

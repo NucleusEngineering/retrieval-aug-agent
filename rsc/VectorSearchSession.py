@@ -47,9 +47,6 @@ class VectorSearchSession:
 
         matched_ids = [match.id for match in res[0] if match.distance >= match_thresh]
 
-        return matched_ids
+        print(f"Matched ids: {matched_ids}")
 
-    def stream_upsert(self, id, embedding):
-        # streaming upsert of input embedding
-        pass
-    
+        return matched_ids
