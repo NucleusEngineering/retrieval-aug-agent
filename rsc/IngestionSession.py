@@ -199,7 +199,7 @@ class IngestionSession:
 
         for idx, split in enumerate(doc_splits):
             split.metadata["chunk_identifier"] = (
-                file_name.split("/")[-1].split(".pdf")[0] + "-" + str(idx)
+                file_name.split("/")[-1].split(".pdf")[0] + "-chunk" + str(idx)
             )
 
         return doc_splits
