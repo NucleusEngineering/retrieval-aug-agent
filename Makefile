@@ -52,6 +52,11 @@ endpoint:
 		--display-name retrieval-agent-demo \
 		--description "Endpoint for RAG-DEMO Vector Search index" \
 		--public-endpoint-enabled
+	gcloud alpha ai index-endpoints deploy-index $$(gcloud alpha ai index-endpoints list --format json | jq -r '.[].name' | grep --color=never -Po '\K(\d+)$$') \
+		--deployed-index-id retrieval_aug_agent \
+		--index $$(gcloud alpha ai indexes list --format json | jq -r '.[].name') \
+		--display-name retrieval-aug-agent
+	printf "\n\tINFO\tIndex is $$(gcloud alpha ai indexes list --format json | jq -r '.[].name' |  grep --color=never -Po '\K(\d+)$$')\n\n"
 	printf "\n\tINFO\tEndpoint is $$(gcloud alpha ai index-endpoints list --format json | jq -r '.[].name' | grep -Po '\K(\d+)$$')\n\n"
 
 build:
