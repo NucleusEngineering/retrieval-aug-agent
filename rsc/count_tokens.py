@@ -12,20 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Use the official lightweight Python image.
-FROM python:3.11
+project = "project-id"
+location = "us-central1"
+content = "Hello World!"
 
-# Allow statements and log messages to immediately appear in the logs
-ENV PYTHONUNBUFFERED True
+from google.cloud import aiplatform_v1beta1
 
-# Copy local code to the container image.
-ENV APP_HOME /app
-WORKDIR $APP_HOME
-COPY . ./
+client = aiplatform_v1beta1.PredictionServiceClient(
+    client_options={"api_endpoint": f"{location}-aiplatform.googleapis.com"}
+)
 
-# Install production dependencies.
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Streamlit app entrypoint
-ENTRYPOINT ["streamlit", "run", "main.py", "--server.port=8080", "--server.address=0.0.0.0"]
+print(
+    client.count_tokens(
+        endpoint=f"projects/{project}/locations/{location}/publishers/google/models/text-bison@001",
+        instances=[{"content": content}],
+    )
+)
