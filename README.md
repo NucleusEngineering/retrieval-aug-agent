@@ -52,7 +52,7 @@ To set up the Retrieval Augmented Generation (RAG) based QA Architecture execute
     * Create a multiregional storage bucket for the documents of your knowledge base
     * Create a regional bucket to store the vectors for your vector search index:
         * Folder structure of the bucket has to be: 
-        >> *── batch_root── delete*
+        > *── batch_root── delete*
     * [Documentation on how to create a bucket](https://cloud.google.com/storage/docs/creating-buckets#storage-create-bucket-console)
 
 4. **Upload the embeddings_0.json file into your 'batch_root' folder in the regional bucket.**
