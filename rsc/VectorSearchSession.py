@@ -23,12 +23,13 @@ class VectorSearchSession:
                  index_endpoint_id,
                  deployed_index_id,
                  credentials,
-                 gcp_region="europe-west1",
-                 api_endpoint="1734329425.europe-west1-412810111069.vdb.vertexai.goog",
+                 gcp_region,
+                 api_endpoint,
                  ):
         
         self.gcp_project_id = gcp_project_id # the gcp project that hosts the matching engine instance
         self.gcp_project_number = gcp_project_number # the gcp project number that hosts the matching engine instance
+        self.gcp_region = gcp_region # the gcp region in which the instance is deployed
         self.credentials = credentials # gcp credentials to access the matching engine instance
         self.gcp_region = gcp_region # vector search index region
         self.index_endpoint_id = index_endpoint_id # vector search index index endpoint if (numeric)

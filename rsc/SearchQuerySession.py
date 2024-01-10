@@ -40,6 +40,8 @@ class SearchQuerySession:
             credentials=self.credentials,
             index_endpoint_id=self.secrets["VECTOR_SEARCH_INDEX_ENDPOINT_ID"],
             deployed_index_id=self.secrets["VECTOR_SEARCH_DEPLOYED_INDEX_ID"],
+            gcp_region = self.secrets["GCP_REGION"],
+            api_endpoint = self.secrets["GCP_MATCHING_ENGINE_ENDPOINT"]
         )
         self.firestore_collection_name = self.secrets["FIRESTORE_COLLECTION_NAME"]
         self.model_name = model_name

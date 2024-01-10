@@ -164,6 +164,7 @@ def upload_new_file(new_file:bytes, new_file_name:str, max_pages_per_file:int) -
         print("Splitting & Ingestion completed.")
 
     else:
+        new_file_name = f"{new_file_name[:-4]}-part0.pdf"
         ingestion(new_file_name=new_file_name, file_to_ingest=new_file, ingest_local_file=False)
         print("PDF file has", num_pages, "pages or less, no splitting was needed. Ingestetion completed.")
 
