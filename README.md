@@ -78,7 +78,7 @@ To set up the Retrieval Augmented Generation (RAG) based QA Architecture execute
 
 8. **Insert all variables into your .env file**
 
-9. **Run `pip install -r requirements. txt` to install all packages in your local or virtual environment**
+9. **Run `pip install -r requirements.txt` to install all packages in your local or virtual environment**
 
 10. **Execute `streamlit run main.py` to run the Frontend Demo**
     
