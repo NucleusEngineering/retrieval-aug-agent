@@ -18,9 +18,6 @@ from dotenv import dotenv_values
 
 import streamlit as st
 import pandas as pd
-import PyPDF2
-from io import BytesIO
-from io import StringIO
 
 from google.cloud import storage
 import google.auth
@@ -29,13 +26,12 @@ import google.auth
 from rsc.SearchQuerySession import SearchQuerySession
 from rsc.IngestionSession import IngestionSession
 from rsc.retrievers.NotionRetriever import NotionRetrievalSession
-
+from rsc.PreprocessingSession import PreprocessingSession
 from rsc.DeletionSession import DeletionSession
 
 
 secrets = dotenv_values(".env")
 credentials, _ = google.auth.load_credentials_from_file(secrets['GCP_CREDENTIAL_FILE'])
-
 
 class DocPreview:
     def __init__(self, list_of_docs: list):
@@ -124,50 +120,10 @@ def get_current_files(bucket_name, secrets=secrets, credentials=credentials) -> 
     return files_with_links
 
 
-def upload_new_file(new_file:bytes, new_file_name:str, max_pages_per_file:int) -> None:
+def upload_new_file(new_file:bytes, new_file_name:str) -> None:
     
-    ingestion = IngestionSession() 
-
-    pdf_file = BytesIO(new_file)
-    pdf_reader = PyPDF2.PdfReader(pdf_file)
-    num_pages = len(pdf_reader.pages)
-    
-    # print number of pages 
-    print(f"Total Pages: {num_pages}") 
-
-    # check if PDF file exceeds the page limit
-    if num_pages > max_pages_per_file:
-        output_file_index = 1
-        output_file_name = f"{new_file_name[:-4]}-part{output_file_index}.pdf"
-        pdf_writer = PyPDF2.PdfWriter()
-        tmp = BytesIO()
-
-        for page_num in range(num_pages):
-            pdf_writer.add_page(pdf_reader.pages[page_num])
-
-            if page_num % max_pages_per_file == max_pages_per_file - 1:
-                pdf_writer.write(tmp)
-                output_file_bytes = tmp.getvalue()
-                ingestion(new_file_name=output_file_name, file_to_ingest=output_file_bytes, ingest_local_file=False)
-
-                output_file_index += 1
-                output_file_name = f"{new_file_name[:-4]}-part{output_file_index}.pdf"
-                pdf_writer = PyPDF2.PdfWriter()
-                tmp = BytesIO()
-
-        # Write any remaining pages to the last output file
-        if page_num % max_pages_per_file != max_pages_per_file - 1:
-            pdf_writer.write(tmp)
-            output_file_bytes = tmp.getvalue()
-            ingestion(new_file_name=output_file_name, file_to_ingest=output_file_bytes, ingest_local_file=False)
-
-        print("Splitting & Ingestion completed.")
-
-    else:
-        new_file_name = f"{new_file_name[:-4]}-part0.pdf"
-        ingestion(new_file_name=new_file_name, file_to_ingest=new_file, ingest_local_file=False)
-        print("PDF file has", num_pages, "pages or less, no splitting was needed. Ingestetion completed.")
-
+    preprocessing = PreprocessingSession()
+    preprocessing(new_file_name=new_file_name, file_to_ingest=new_file, ingest_local_file=False, max_pages_per_file=15)
 
     return None
 
@@ -212,7 +168,7 @@ with st.form("file_upload_form"):
     if button and uploaded_file is not None:
         upladed_file_name = uploaded_file.name
         uploaded_file_bytes = uploaded_file.getvalue()
-        upload_new_file(new_file=uploaded_file_bytes, new_file_name=upladed_file_name, max_pages_per_file=15)
+        upload_new_file(new_file=uploaded_file_bytes, new_file_name=upladed_file_name)
 
 st.title('Upload data from your Notion database')
 

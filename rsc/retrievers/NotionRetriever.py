@@ -13,9 +13,7 @@
 # limitations under the License.
 
 import requests
-from datetime import datetime, timezone
 from dotenv import dotenv_values
-
 
 class NotionRetrievalSession:
     def __init__(self,
@@ -112,24 +110,4 @@ class NotionRetrievalSession:
 
             database_content.append(page_content)
             database_pages.append(page_title)
-
-        print(database_content)
         return database_content, database_pages
-
-#notion_retrieval = NotionRetrievalSession()
-
-#notion_data = notion_retrieval(database_id="8c4ef50799eb4e04b95659d38c3effc3") 
-
-
-#next steps:
-# include frontend - check
-# include "name" prop - check
-# having database_name in metadata as source - check
-# include subpages
-
-
-
-
-
-
-    
