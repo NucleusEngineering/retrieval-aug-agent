@@ -6,6 +6,7 @@ google-cloud-bigquery==3.13.0
 firebase-admin==6.3.0
 vertexai==0.0.1
 langchain==0.1.0
+langchain-community
 streamlit==1.29.0
 protobuf~=3.20.0
 python-dotenv==1.0.0

@@ -15,7 +15,8 @@
 from click import prompt
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-from langchain.llms import VertexAI
+#from langchain.llms import VertexAI
+from langchain_community.llms import VertexAI
 
 from vertexai.preview.generative_models import GenerativeModel
 
