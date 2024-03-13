@@ -2,7 +2,7 @@ google-cloud-aiplatform==1.43.0
 google-cloud-storage==2.15.0
 google-cloud-documentai==2.20.0
 google-api-python-client==2.110.0
-google-cloud-bigquery==3.13.0
+google-cloud-bigquery==3.19.0
 firebase-admin==6.3.0
 vertexai==0.0.1
 streamlit==1.30.0

@@ -113,13 +113,13 @@ class VectorSearchSession:
         bq_query_str = f"""SELECT
         *
         FROM
-        VECTOR_SEARCH( TABLE retrieval_augmented_agent.raa_embeddings,
+        VECTOR_SEARCH( TABLE {self.secrets['BIGQUERY_DATASET']}.{self.secrets['BIGQUERY_TABLE']},
             'embedding',
             (
             SELECT
             ml_generate_embedding_result
             FROM
-            ML.GENERATE_EMBEDDING( MODEL `poerschmann-sem-search.retrieval_augmented_agent.emb-model`,
+            ML.GENERATE_EMBEDDING( MODEL `{self.secrets['GCP_PROJECT_ID']}.retrieval_augmented_agent.emb-model`,
                 (
                 SELECT
                 "{string_query}" AS content),
@@ -127,7 +127,7 @@ class VectorSearchSession:
         top_k => {num_neighbors},
         distance_type => 'COSINE',""" + """OPTIONS => '{"use_brute_force":true}');"""
 
-        client = bigquery.Client(project='poerschmann-sem-search', credentials=self.credentials, location=self.secrets["GCP_REGION"])
+        client = bigquery.Client(project=self.secrets['GCP_PROJECT_ID'], credentials=self.credentials, location=self.secrets["GCP_REGION"])
 
         start_time = time.time()
         rows = client.query_and_wait(query=bq_query_str)
@@ -160,7 +160,7 @@ if __name__ == "__main__":
             api_endpoint = secrets["GCP_MATCHING_ENGINE_ENDPOINT"]
         )
     
-    client_query = "Who won the nobel peace prize 2023?"
+    client_query = "What are some typical cringe moments in tracking engineering?"
 
     embedding_session = EmbeddingSession()
     
@@ -168,8 +168,10 @@ if __name__ == "__main__":
             text_to_embed=client_query
         )
     
-    bq_matches = vecs.bq_find_matches(string_query=client_query, query_vec=embedded_query, num_neighbors=2)
-    vertex_matches = vecs.find_matches(query_vec=embedded_query, num_neighbors=2)
+    num_neig = 5
+
+    bq_matches = vecs.bq_find_matches(string_query=client_query, query_vec=embedded_query, num_neighbors=num_neig)
+    vertex_matches = vecs.find_matches(query_vec=embedded_query, num_neighbors=num_neig)
 
     print(f"Exact Same Results: {bq_matches==vertex_matches}")
         
