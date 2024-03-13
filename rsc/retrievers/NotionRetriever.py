@@ -14,6 +14,7 @@
 
 import requests
 from dotenv import dotenv_values
+from notion.client import NotionClient
 
 class NotionRetrievalSession:
     def __init__(self,
@@ -24,6 +25,12 @@ class NotionRetrievalSession:
         self.notion_token = self.secrets['NOTION_TOKEN']
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.notion_base_api_url = "https://api.notion.com/v1"
+        self.headers = headers = {
+            "Authorization": "Bearer " + self.notion_token,
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-02-22"
+        }
 
     def __call__(self, database_id: str):
        
@@ -111,3 +118,63 @@ class NotionRetrievalSession:
             database_content.append(page_content)
             database_pages.append(page_title)
         return database_content, database_pages
+    
+    def _check_db_connection(self, database_id: str) -> None:
+        headers = {
+            "Authorization": "Bearer " + self.notion_token,
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-02-22"
+        }
+
+        readUrl=f"https://api.notion.com/v1/databases/{database_id}"
+        res=requests.request("GET",readUrl,headers=headers)
+        print(res)
+        return None
+    
+    def _get_all_dbs(self) -> None:
+        # Replace with your actual API key
+        search_endpoint = f"{self.notion_base_api_url}/search"
+
+        headers = {
+            "Authorization": "Bearer " + self.notion_token,
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-02-22"
+        }
+
+        payload = {
+            "filter": {"value": "page", "property": "object"}
+        }
+
+        response = requests.post(search_endpoint, headers=headers, json=payload)
+
+        print(response)
+
+        if response.status_code == 200:
+            data = response.json()
+            database_ids = [result['id'] for result in data['results']]
+            print(database_ids)
+        else:
+            print("Error in search:", response.text)
+        return None
+
+    def _retrieve_page(self, page_id: str) -> None:
+        retrieve_page_endpoint = f"{self.notion_base_api_url}/pages/{page_id}"
+        response = requests.get(retrieve_page_endpoint, headers=self.headers)
+
+        if response.status_code == 200:
+            page_data = response.json()
+            print(page_data)
+        else:
+            print(f"Error fetching page: {response.status_code}, Response text: {response.text}")
+
+        return None
+
+if __name__ == "__main__":
+    notion_ret = NotionRetrievalSession()
+    # notion_ret(database_id="5604e108753649fab53d445740577961")
+    # notion_ret._check_db_connection(database_id="322b60a0f2b849d38737283a43962ad2")
+    # notion_ret._get_all_dbs()
+
+    notion_ret._retrieve_page(page_id="f56de35561834507bb730c0c80686395")
+
+    print("Hello World!")
