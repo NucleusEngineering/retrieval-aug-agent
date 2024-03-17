@@ -189,7 +189,7 @@ with st.form("transcript_submission_form"):
 
     client_query = st.text_input("Question:")
 
-    model_name = str(st.selectbox('Which Model would you like to ask?', ('text-bison@001', 'text-bison@002', 'text-unicorn@001', 'gemini-pro'), placeholder='text-bison@002'))
+    model_name = str(st.selectbox('Which Model would you like to ask?', ('gemini-pro', 'text-unicorn@001', 'text-bison@002', 'text-bison@001'), placeholder='text-bison@002'))
 
     button = st.form_submit_button('Ask', help=None, on_click=None, args=None, kwargs=None, type="primary", disabled=False, use_container_width=False)
 
