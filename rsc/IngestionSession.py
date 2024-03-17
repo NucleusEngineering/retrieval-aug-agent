@@ -325,7 +325,7 @@ class IngestionSession:
             raise ValueError("list_of_chunks and upsert_datapoints must be of the same length"
             )
 
-        client = bigquery.Client(project=self.project_id, credentials=self.credentials)
+        client = bigquery.Client(project=self.project_id, credentials=self.credentials, location=self.secrets['BIGQUERY_LOCATION'])
         table_ref = f"{self.secrets['BIGQUERY_DATASET']}.{self.secrets['BIGQUERY_TABLE']}"
         
         rows_to_insert = []
