@@ -70,7 +70,7 @@ class DocPreview:
         st.write(f"[{doc_name}](%s)" % doc_link)
         st.image("PDF_file_icon.png", width=50)
         # print((doc_name))
-        st.button('delete', key=f'delete_{doc_name}', on_click=delete_file, args=[doc_name])
+        st.button('delete', key=f'delete_{doc_name}', on_click=delete_file, args=(doc_name))
 
 def main(client_query:str, model_name: str) -> None:  
 

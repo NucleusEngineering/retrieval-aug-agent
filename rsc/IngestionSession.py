@@ -54,7 +54,7 @@ class IngestionSession:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False, ingest_notion_database: bool = False, data_to_ingest=None, notion_page_titles=None) -> None:
+    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False, ingest_notion_database: bool = False, data_to_ingest=[], notion_page_titles=[]) -> None:
 
         if not ingest_notion_database:
             print("+++++ Upload raw PDF... +++++")
@@ -269,8 +269,8 @@ class IngestionSession:
             )
             app = firebase_admin.initialize_app(credentials)
 
-        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
 
+        db = firestore.client(firebase_admin.get_app())
     
         for split in doc_splits:
             data = {

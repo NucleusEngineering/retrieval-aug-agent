@@ -38,8 +38,8 @@ class DeletionSession:
 
         self.credentials, self.project_id = google.auth.load_credentials_from_file(
             self.secrets['GCP_CREDENTIAL_FILE'])
-        self.firestore_client = firestore.Client(
-            project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
+        
+        self.firestore_client  = firestore.client(firebase_admin.get_app())
 
         self.firestore_collection_name = self.secrets["FIRESTORE_COLLECTION_NAME"]
 
