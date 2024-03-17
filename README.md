@@ -14,7 +14,7 @@ The Streamlit UI allows adding and deleting PDF files to and from the knowlegdge
 
 Once your knowledgebase is connected succesfully select an LLM and enter a query.
 
-![user interface demo](./ui_demo.png)
+![user interface demo](./img/ui_demo.png)
 
 ## Architecture RAG Q&A
 The full tooling is using Google Cloud Platform (GCP) native technology.
@@ -25,7 +25,7 @@ The full tooling is using Google Cloud Platform (GCP) native technology.
 * Ledger connecting embeddings to original content strings: [Firestore](https://firebase.google.com/docs/firestore)
 * generating a conversational response to the users original question based on the content identified as relevant: [PaLM text model](https://cloud.google.com/vertex-ai/docs/generative-ai/text/test-text-prompts)
 
-![Retrieval Augmented Generation (RAG) based QA Architecture](./rag_qa.png)
+![Retrieval Augmented Generation (RAG) based QA Architecture](./img/rag_qa.png)
 
 ## Set Up RAG Q&A
 To set up the Retrieval Augmented Generation (RAG) based QA Architecture execute the following steps:
