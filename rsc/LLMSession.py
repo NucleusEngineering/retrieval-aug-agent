@@ -69,7 +69,10 @@ class LLMSession:
                     "top_p": 1,
                 },
             )
-            response = {"text": responses.text}
+            try:
+                response = {"text": responses.text}
+            except:
+                response = {"text": "Empty LLM response. Please try again."}
         else:
             llm = VertexAI(
                 model_name=self.model_name,

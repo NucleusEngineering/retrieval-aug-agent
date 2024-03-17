@@ -21,7 +21,7 @@ from google.cloud import bigquery
 
 from langchain.vectorstores.utils import DistanceStrategy
 from langchain_community.vectorstores import BigQueryVectorSearch
-from langchain_google_vertexai import VertexAIEmbeddings
+# from langchain_google_vertexai import VertexAIEmbeddings
 
 try:
     from rsc.EmbeddingSession import EmbeddingSession
@@ -94,21 +94,21 @@ class VectorSearchSession:
     
     def bq_find_matches(self, string_query:str, query_vec: list, num_neighbors: int = 10, match_thresh: float = 0.6):
         
-        embedding_model = VertexAIEmbeddings(
-            model_name="textembedding-gecko@001",
-            project=self.secrets['GCP_PROJECT_ID'],
-            credentials=self.credentials
-        )
+        # embedding_model = VertexAIEmbeddings(
+        #     model_name="textembedding-gecko@001",
+        #     project=self.secrets['GCP_PROJECT_ID'],
+        #     credentials=self.credentials
+        # )
 
-        store = BigQueryVectorSearch(
-            embedding=embedding_model,
-            credentials=self.credentials,
-            project_id=self.secrets['GCP_PROJECT_ID'],
-            dataset_name=self.secrets['BIGQUERY_DATASET'],
-            table_name=self.secrets['BIGQUERY_TABLE'],
-            location=self.secrets['GCP_REGION'],
-            distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,
-        )
+        # store = BigQueryVectorSearch(
+        #     embedding=embedding_model,
+        #     credentials=self.credentials,
+        #     project_id=self.secrets['GCP_PROJECT_ID'],
+        #     dataset_name=self.secrets['BIGQUERY_DATASET'],
+        #     table_name=self.secrets['BIGQUERY_TABLE'],
+        #     location=self.secrets['GCP_REGION'],
+        #     distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,
+        # )
 
         bq_query_str = f"""SELECT
         *
