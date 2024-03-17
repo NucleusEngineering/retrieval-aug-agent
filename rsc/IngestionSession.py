@@ -23,6 +23,7 @@ from google.api_core.client_options import ClientOptions
 from google.cloud import documentai
 from google.cloud import storage
 from google.cloud import aiplatform_v1
+from google.cloud import bigquery
 import google.auth
 
 import firebase_admin
@@ -53,7 +54,7 @@ class IngestionSession:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False, ingest_notion_database: bool = False, data_to_ingest=None, notion_page_titles=None) -> None:
+    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False, ingest_notion_database: bool = False, data_to_ingest=[], notion_page_titles=[]) -> None:
 
         if not ingest_notion_database:
             print("+++++ Upload raw PDF... +++++")
@@ -97,6 +98,9 @@ class IngestionSession:
 
         print("+++++ Updating Vector Search Index... +++++")
         self._vector_index_streaming_upsert(embeddings_to_ingest)
+        
+        print("+++++ Updating BigQuery Index... +++++")
+        self._bigquery_index_streaming_upsert(list_of_chunks=list_of_chunks, upsert_datapoints=embeddings_to_ingest)
 
         print("+++++ Ingestion Done. +++++")
 
@@ -265,8 +269,8 @@ class IngestionSession:
             )
             app = firebase_admin.initialize_app(credentials)
 
-        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
 
+        db = firestore.client(firebase_admin.get_app())
     
         for split in doc_splits:
             data = {
@@ -286,7 +290,6 @@ class IngestionSession:
 
     def _vector_index_streaming_upsert(self, upsert_datapoints: list) -> None:
         # method to upsert embeddings to vector search index
-
 
         index_client = aiplatform_v1.IndexServiceClient(credentials=self.credentials, client_options=dict(
             api_endpoint=f"{self.secrets['GCP_REGION']}-aiplatform.googleapis.com"
@@ -310,6 +313,40 @@ class IngestionSession:
 
         return None
 
+    def _bigquery_index_streaming_upsert(self, list_of_chunks: list, upsert_datapoints: list) -> None:
+        """Appends a single data point (dictionary) to a BigQuery table.
+        Args:
+            project_id (str): Google Cloud project ID.
+            dataset_id (str): BigQuery dataset ID.
+            table_id (str): BigQuery table ID.
+            data (dict): A dictionary representing a single row of data.
+        """
+        if len(list_of_chunks) != len(upsert_datapoints):
+            raise ValueError("list_of_chunks and upsert_datapoints must be of the same length"
+            )
+
+        client = bigquery.Client(project=self.project_id, credentials=self.credentials, location=self.secrets['BIGQUERY_LOCATION'])
+        table_ref = f"{self.secrets['BIGQUERY_DATASET']}.{self.secrets['BIGQUERY_TABLE']}"
+        
+        rows_to_insert = []
+
+        for count, dp in enumerate(upsert_datapoints):
+            dp_dict = json.loads(dp)
+                    
+            bq_row = {
+                "id": dp_dict["id"],
+                "document_name": list_of_chunks[count].metadata["document_name"],
+                "page_content": list_of_chunks[count].page_content,
+                "embedding": dp_dict["embedding"],
+            }
+            rows_to_insert.append(bq_row)
+
+        errors = client.insert_rows_json(table_ref, rows_to_insert)
+        if errors == []:
+            print("New rows have been added.")
+        else:
+            print("Encountered errors while inserting rows: {}".format(errors))
+        return None
 
 if __name__ == "__main__":
     cwd = os.getcwd()
