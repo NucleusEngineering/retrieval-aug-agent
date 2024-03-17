@@ -34,7 +34,7 @@ repo:
 bucket:
 	gcloud storage buckets create gs://${RAW_PDFS_BUCKET_NAME} \
 		--location ${GCP_REGION}
-	gsutil cp null.json gs://${RAW_PDFS_BUCKET_NAME}/path/init.json
+	gsutil cp ./index_creation/null.json gs://${RAW_PDFS_BUCKET_NAME}/path/init.json
 
 database:
 	gcloud firestore databases create \
@@ -45,7 +45,7 @@ index:
 		--display-name retrieval-agent-index \
 		--description "RAG DEMO: Brand name PDFs: 768d streaming update index on Vertex Vector Search" \
 		--index-update-method stream_update \
-		--metadata-file index-metadata.json 
+		--metadata-file ./index_creation/index-metadata.json 
 
 endpoint:
 	gcloud alpha ai index-endpoints create \
