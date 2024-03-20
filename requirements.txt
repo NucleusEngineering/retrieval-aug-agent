@@ -9,3 +9,4 @@ streamlit==1.30.0
 python-dotenv==1.0.0
 notion==0.0.28
 PyPDF2==3.0.1
+anthropic==0.21.0

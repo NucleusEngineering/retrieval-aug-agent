@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from platform import mac_ver
 from click import prompt
+from dotenv import dotenv_values
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-#from langchain.llms import VertexAI
+# from langchain.llms import VertexAI
 from langchain_community.llms import VertexAI
 
 from vertexai.preview.generative_models import GenerativeModel
+
+from anthropic import AnthropicVertex
 
 QA_PROMPT_TEMPLATE = """SYSTEM: You are an intelligent assistant helping the users with their questions on the content of given context.
 
@@ -49,6 +53,7 @@ class LLMSession:
         self.context_docs = context_docs
         self.prompt_template = QA_PROMPT_TEMPLATE
         self.model_name = model_name
+        self.secrets = dotenv_values(".env")
 
     def llm_prediction(
         self,
@@ -64,15 +69,33 @@ class LLMSession:
                     question=self.client_query_string, context=self.context_docs
                 ),
                 generation_config={
-                    "max_output_tokens": 2048,
-                    "temperature": 0.9,
-                    "top_p": 1,
+                    "max_output_tokens": max_output_tokens,
+                    "temperature": temperature,
+                    "top_p": top_p,
                 },
             )
             try:
                 response = {"text": responses.text}
             except:
                 response = {"text": "Empty LLM response. Please try again."}
+        elif self.model_name == "claude3-sonnet":
+            client = AnthropicVertex(region=str("us-central1"), project_id=str(self.secrets["GCP_PROJECT_ID"]))
+            response = client.messages.create(
+                model="claude-3-sonnet@20240229",
+                max_tokens=max_output_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": self.prompt_template.format(
+                            question=self.client_query_string, context=self.context_docs
+                        ),
+                    }
+                ],
+            )
+            return {"text": response.content[0].text}
         else:
             llm = VertexAI(
                 model_name=self.model_name,
@@ -84,7 +107,8 @@ class LLMSession:
             )
 
             llm_chain = LLMChain(
-                llm=llm, prompt=PromptTemplate.from_template(self.prompt_template)
+                llm=llm, prompt=PromptTemplate.from_template(
+                    self.prompt_template)
             )
 
             response = llm_chain(
@@ -128,7 +152,7 @@ class LLMSession:
 if __name__ == "__main__":
     prompt = "Which is the city with the most bridges?"
     llm = LLMSession(
-        client_query_string=prompt, context_docs=None, model_name="text-bison@002"
+        client_query_string=prompt, context_docs=None, model_name="claude3-sonnet"
     )
     response = llm.llm_prediction()
     print(response)
