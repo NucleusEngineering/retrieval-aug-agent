@@ -24,13 +24,14 @@ class PreprocessingSession:
     def __init__(self) -> None:
         self.secrets = dotenv_values(".env")
 
-    def __call__(self, new_file_name:str, max_pages_per_file:int, file_to_ingest=None, ingest_local_file: bool = False) -> None:
+    def __call__(self, new_file_name:str, max_pages_per_file:int, file_to_ingest=None, ingest_local_file: bool = False, ingest_pdf: bool = True) -> None:
 
         ingestion = IngestionSession() 
 
         pdf_file = BytesIO(file_to_ingest)
         pdf_reader = PyPDF2.PdfReader(pdf_file)
         num_pages = len(pdf_reader.pages)
+        ingest_pdf = ingest_pdf
         
         # print number of pages 
         print(f"Total Pages: {num_pages}") 
@@ -48,7 +49,7 @@ class PreprocessingSession:
                 if page_num % max_pages_per_file == max_pages_per_file - 1:
                     pdf_writer.write(tmp)
                     output_file_bytes = tmp.getvalue()
-                    ingestion(new_file_name=output_file_name, file_to_ingest=output_file_bytes, ingest_local_file=False)
+                    ingestion(new_file_name=output_file_name, file_to_ingest=output_file_bytes, ingest_local_file=False, ingest_pdf = ingest_pdf)
 
                     output_file_index += 1
                     output_file_name = f"{new_file_name[:-4]}-part{output_file_index}.pdf"
@@ -59,13 +60,13 @@ class PreprocessingSession:
             if page_num % max_pages_per_file != max_pages_per_file - 1:
                 pdf_writer.write(tmp)
                 output_file_bytes = tmp.getvalue()
-                ingestion(new_file_name=output_file_name, file_to_ingest=output_file_bytes, ingest_local_file=False)
+                ingestion(new_file_name=output_file_name, file_to_ingest=output_file_bytes, ingest_local_file=False, ingest_pdf = ingest_pdf)
 
             print("Splitting & Ingestion completed.")
 
         else:
             new_file_name = f"{new_file_name[:-4]}-part0.pdf"
-            ingestion(new_file_name=new_file_name, file_to_ingest=file_to_ingest, ingest_local_file=False)
+            ingestion(new_file_name=new_file_name, file_to_ingest=file_to_ingest, ingest_local_file=False, ingest_pdf = ingest_pdf)
             print("PDF file has", num_pages, "pages or less, no splitting was needed. Ingestion completed.")
 
 

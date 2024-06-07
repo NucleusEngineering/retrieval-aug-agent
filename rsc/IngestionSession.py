@@ -54,9 +54,9 @@ class IngestionSession:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
-    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False, ingest_notion_database: bool = False, data_to_ingest=[], notion_page_titles=[]) -> None:
+    def __call__(self, new_file_name: str, file_to_ingest=None, ingest_local_file: bool = False, ingest_pdf: bool = False, ingest_json: bool = False, ingest_notion_database: bool = False, data_to_ingest=None, notion_page_titles=None) -> None:
 
-        if not ingest_notion_database:
+        if ingest_pdf:
             print("+++++ Upload raw PDF... +++++")
             self._store_raw_upload(new_file_name=new_file_name, file_to_ingest=file_to_ingest, ingest_local_file=ingest_local_file)
 
@@ -74,7 +74,7 @@ class IngestionSession:
                                             file_name=new_file_name,
                                             chunk_size=self.chunk_size,
                                             chunk_overlap=self.chunk_overlap)
-        else:
+        elif ingest_notion_database:
             list_of_chunks = [] 
             counter = 0
             for page in data_to_ingest:
@@ -89,6 +89,20 @@ class IngestionSession:
                                                 chunk_overlap=self.chunk_overlap)
                 list_of_chunks.append(chunk[0])
                  
+
+        elif ingest_json:
+            print("+++++ Upload json file... +++++")
+            self._store_json_upload(new_file_name=new_file_name, file_to_ingest=file_to_ingest, ingest_local_file=ingest_local_file)
+            encoding = 'utf-8'  # Specify the encoding of your bytes object 
+            document_string = file_to_ingest.decode(encoding)
+            print(document_string)
+    
+            print("+++++ Chunking Document... +++++")
+            list_of_chunks = self._chunk_doc(stringified_doc=document_string,
+                                            file_name=new_file_name,
+                                            chunk_size=self.chunk_size,
+                                            chunk_overlap=self.chunk_overlap)
+                 
         print (list_of_chunks)
         print("+++++ Store Embeddings & Document Identifiers in Firestore... +++++")
         self._firestore_index_embeddings(list_of_chunks)
@@ -98,9 +112,9 @@ class IngestionSession:
 
         print("+++++ Updating Vector Search Index... +++++")
         self._vector_index_streaming_upsert(embeddings_to_ingest)
-        
-        print("+++++ Updating BigQuery Index... +++++")
-        self._bigquery_index_streaming_upsert(list_of_chunks=list_of_chunks, upsert_datapoints=embeddings_to_ingest)
+
+        #print("+++++ Updating BigQuery Index... +++++")
+        #self._bigquery_index_streaming_upsert(list_of_chunks=list_of_chunks, upsert_datapoints=embeddings_to_ingest)
 
         print("+++++ Ingestion Done. +++++")
 
@@ -238,7 +252,6 @@ class IngestionSession:
         # store raw uploaded pdf in gcs
         storage_client = storage.Client(credentials=self.credentials)
         bucket = storage_client.bucket(self.secrets["RAW_PDFS_BUCKET_NAME"])
-
         print(new_file_name)
 
         # string = "This is a string containing a substring."
@@ -260,6 +273,29 @@ class IngestionSession:
 
         return None
 
+    def _store_json_upload(
+        self, new_file_name: str, file_to_ingest, ingest_local_file: bool = False
+    ) -> None:
+        # store json file in gcs
+        storage_client = storage.Client(credentials=self.credentials)
+        bucket = storage_client.bucket(self.secrets["RAW_PDFS_BUCKET_NAME"])
+
+        print(new_file_name)
+
+        if ".json" in new_file_name:
+            blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
+        else:
+            new_file_name = new_file_name + ".json"
+            blob = bucket.blob("documents/raw_uploaded/" + new_file_name.split("/")[-1])
+
+        print(ingest_local_file)
+
+        file_contents = io.BytesIO(file_to_ingest)
+        blob.upload_from_file(file_contents)
+
+        return None
+
+
     def _firestore_index_embeddings(self, doc_splits: list) -> None:
         # upload embeddings to firestore
 
@@ -268,7 +304,6 @@ class IngestionSession:
                 self.secrets["GCP_CREDENTIAL_FILE"]
             )
             app = firebase_admin.initialize_app(credentials)
-
 
         db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
     
@@ -291,6 +326,7 @@ class IngestionSession:
     def _vector_index_streaming_upsert(self, upsert_datapoints: list) -> None:
         # method to upsert embeddings to vector search index
 
+
         index_client = aiplatform_v1.IndexServiceClient(credentials=self.credentials, client_options=dict(
             api_endpoint=f"{self.secrets['GCP_REGION']}-aiplatform.googleapis.com"
         ))
@@ -312,7 +348,7 @@ class IngestionSession:
         index_client.upsert_datapoints(request=upsert_request)
 
         return None
-
+    
     def _bigquery_index_streaming_upsert(self, list_of_chunks: list, upsert_datapoints: list) -> None:
         """Appends a single data point (dictionary) to a BigQuery table.
         Args:
@@ -347,6 +383,7 @@ class IngestionSession:
         else:
             print("Encountered errors while inserting rows: {}".format(errors))
         return None
+
 
 if __name__ == "__main__":
     cwd = os.getcwd()

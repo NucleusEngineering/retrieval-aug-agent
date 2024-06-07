@@ -46,17 +46,21 @@ class SearchQuerySession:
         self.firestore_collection_name = self.secrets["FIRESTORE_COLLECTION_NAME"]
         self.model_name = model_name
 
-    def __call__(self, client_query) -> tuple:
-        answer, sources = self._main(client_query)
+    def __call__(self, client_query, image=None) -> tuple:
+        if image is not None:
+            answer, sources = self._main(client_query, image)
+        else: 
+            answer, sources = self._main(client_query)
         print(answer)
         print(sources)
         return answer, sources
 
-    def _main(self, client_query):
+    def _main(self, client_query, image=None):
         """
         Orchestrates answer generation steps.
         """
         # Generate Client Query Embedding.
+        
         print("+++++ Generating Client Query Embedding... +++++")
         client_query_embedding = self.embedding_session.get_vertex_embedding(
             text_to_embed=client_query
@@ -65,7 +69,7 @@ class SearchQuerySession:
         # Find nearest matches for client query embedding.
         print("+++++ Finding Client Query Matches... +++++")
         matched_ids = self.vector_search_session.find_matches(
-            query_vec=client_query_embedding, num_neighbors=10, match_thresh=0.7
+            query_vec=client_query_embedding, num_neighbors=10, match_thresh=0.6
         )
 
         # Get matched documents from Firestore.
@@ -74,13 +78,14 @@ class SearchQuerySession:
             matched_ids
         )
         joined_docs_content = " ".join(relevant_docs_content)
-
+        
         # call LLM with final prompt
-        print("+++++ Prompting LLM with final prompt... +++++")
+        print("+++++ Prompting LLM with final prompt... +++++")   
         llm_answer = LLMSession(
             client_query_string=client_query,
             context_docs=joined_docs_content,
             model_name=self.model_name,
+            image = image,
         ).llm_prediction(max_output_tokens=1024, temperature=0.1, top_p=0.6, top_k=20)
 
         return llm_answer, relevant_docs_names
@@ -94,7 +99,6 @@ class SearchQuerySession:
             app = firebase_admin.initialize_app(credentials)
 
         # Setup & auth firestore client.
-        #db = firestore.client(firebase_admin.get_app())
         db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
 
         # Pull relevant docs from Firestore collection.
