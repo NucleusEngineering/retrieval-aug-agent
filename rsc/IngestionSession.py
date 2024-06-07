@@ -270,7 +270,7 @@ class IngestionSession:
             app = firebase_admin.initialize_app(credentials)
 
 
-        db = firestore.client(firebase_admin.get_app())
+        db = firestore.Client(project=self.secrets["GCP_PROJECT_ID"], credentials=self.credentials, database=self.secrets["FIRESTORE_DATABASE_ID"])
     
         for split in doc_splits:
             data = {

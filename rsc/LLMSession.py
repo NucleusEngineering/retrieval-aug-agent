@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from platform import mac_ver
+
 from click import prompt
 from dotenv import dotenv_values
 from langchain.prompts import PromptTemplate
