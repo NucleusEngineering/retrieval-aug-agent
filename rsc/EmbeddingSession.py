@@ -42,7 +42,7 @@ class EmbeddingSession:
             list: Array containing embedding dimensions.
         """
 
-        model = TextEmbeddingModel.from_pretrained("textembedding-gecko@001")
+        model = TextEmbeddingModel.from_pretrained("text-embedding-004")
         embedding = model.get_embeddings([text_to_embed])
         return embedding[0].values
 
