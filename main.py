@@ -69,13 +69,16 @@ class DocPreview:
         st.image("./img/PDF_file_icon.png", width=50)
         st.button('delete', key=f'delete_{doc_name}', on_click=delete_file, args=[doc_name])
 
-def main(client_query:str, model_name: str) -> None:  
+def main(client_query:str, model_name: str, uploaded_img_bytes=None) -> None:  
 
     with st.spinner('Processing... This might take a minute or two.'):
 
         query_session = SearchQuerySession(model_name=model_name)
-        answer, sources = query_session(client_query=client_query)
-
+        if uploaded_img is not None:
+            answer, sources = query_session(client_query=client_query, image=uploaded_img_bytes)
+        else:
+            answer, sources = query_session(client_query=client_query)
+    
         df = pd.DataFrame({"Sources": sources})
         st.dataframe(df)
 
@@ -120,10 +123,16 @@ def get_current_files(bucket_name, secrets=secrets, credentials=credentials) -> 
 def upload_new_file(new_file:bytes, new_file_name:str) -> None:
     
     preprocessing = PreprocessingSession()
-    preprocessing(new_file_name=new_file_name, file_to_ingest=new_file, ingest_local_file=False, max_pages_per_file=15)
+    preprocessing(new_file_name=new_file_name, file_to_ingest=new_file, ingest_local_file=False, max_pages_per_file=15, ingest_pdf=True)
 
     return None
 
+def upload_new_json_file(new_file:bytes, new_file_name:str) -> None:
+    
+    ingestion = IngestionSession()
+    ingestion(new_file_name=new_file_name, file_to_ingest=new_file, ingest_local_file=False, ingest_json=True)
+
+    return None
 
 def fetch_notion_database(database_id:str) -> None:
     notion_retrieval = NotionRetrievalSession()
@@ -146,7 +155,13 @@ def delete_file(document_name:str) -> None:
 
     return None
 
-st.title('These files are currently in your knowledge base.')
+
+st.title('GenAI Demo')
+st.caption('')
+
+st.header('Ingest data to your knowledge base.')
+
+st.markdown('**These pdf files are currently in your knowledge base.**')
 
 current_files = get_current_files(bucket_name=secrets["RAW_PDFS_BUCKET_NAME"])
 df = pd.DataFrame(current_files)
@@ -154,8 +169,7 @@ st.dataframe(df)
 
 DocPreview(list_of_docs=current_files).render()
 
-
-st.title('Upload a new file to your knowledge base.')
+st.markdown('**Upload a new PDF file for your knowledge base.**')
 
 with st.form("file_upload_form"):
     uploaded_file = st.file_uploader("Choose a file")
@@ -167,7 +181,21 @@ with st.form("file_upload_form"):
         uploaded_file_bytes = uploaded_file.getvalue()
         upload_new_file(new_file=uploaded_file_bytes, new_file_name=upladed_file_name)
 
-st.title('Upload data from your Notion database')
+
+st.markdown('**Upload a new json file to your knowledge base.**')
+
+with st.form("json_upload_form"):
+    uploaded_file = st.file_uploader("Choose a file")
+    
+    button = st.form_submit_button('Upload', help=None, on_click=None, args=None, kwargs=None, type="primary", disabled=False, use_container_width=False)
+
+    if button and uploaded_file is not None:
+        upladed_file_name = uploaded_file.name
+        uploaded_file_bytes = uploaded_file.getvalue()
+        upload_new_json_file(new_file=uploaded_file_bytes, new_file_name=upladed_file_name)
+
+
+st.markdown('**Upload data from your Notion database**')
 
 with st.form("notion_upload_form"):
     client_database_id = st.text_input("Database-ID:")
@@ -180,16 +208,26 @@ with st.form("notion_upload_form"):
         fetch_notion_database(database_id=client_database_id)
 
 
-st.title('Ask a question towards your knowledge base.')
+st.header('Ask a question.')
+st.caption('This Q&A demo will answer to questions only related to your knowledge base documents.')
 
 with st.form("transcript_submission_form"):
 
     client_query = st.text_input("Question:")
 
-    model_name = str(st.selectbox('Which Model would you like to ask?', ('gemini-pro', 'claude3-sonnet', 'text-unicorn@001', 'text-bison@002', 'text-bison@001'),
+    uploaded_img = st.file_uploader("Choose an image", type='png')
+
+    model_name = str(st.selectbox('Which Model would you like to ask?', ('gemini-1.5-flash','gemini-1.5-pro', 'gemini-1.0-pro', 'claude3-sonnet', 'text-unicorn@001', 'text-bison@002', 'text-bison@001'),
                                   placeholder='text-bison@002'))
 
     button = st.form_submit_button('Ask', help=None, on_click=None, args=None, kwargs=None, type="primary", disabled=False, use_container_width=False)
 
     if button:
-        main(client_query=client_query, model_name=model_name)
+        if uploaded_img is not None:
+            main(client_query=client_query, uploaded_img_bytes = uploaded_img.getvalue(), model_name=model_name)
+        else:
+            main(client_query=client_query, model_name=model_name)
+
+
+
+# Has the number of people taking the CPA exam risen since 2016?
