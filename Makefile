@@ -34,7 +34,7 @@ repo:
 bucket:
 	gcloud storage buckets create gs://${RAW_PDFS_BUCKET_NAME} \
 		--location ${GCP_REGION}
-	gsutil cp ./index_creation/null.json gs://${RAW_PDFS_BUCKET_NAME}/path/init.json
+	gcloud storage cp ./index_creation/null.json gs://${RAW_PDFS_BUCKET_NAME}/path/init.json
 
 database:
 	gcloud firestore databases create \
